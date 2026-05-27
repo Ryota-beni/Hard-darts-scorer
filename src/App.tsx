@@ -22,6 +22,12 @@ export default function App() {
     setActiveTab('stats');
   };
 
+  const handleDeleteGame = (id: string) => {
+    const updated = games.filter((g) => g.id !== id);
+    setGames(updated);
+    saveGames(updated);
+  };
+
   const handleAddGame = (game: Game) => {
     const updated = [...games, game].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -35,7 +41,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {activeTab === 'stats' && <Dashboard games={games} />}
         {activeTab === 'game' && <GameView onLegSave={handleLegSave} onMatchComplete={handleMatchComplete} />}
-        {activeTab === 'history' && <History games={games} onAddGame={handleAddGame} />}
+        {activeTab === 'history' && <History games={games} onAddGame={handleAddGame} onDeleteGame={handleDeleteGame} />}
         {activeTab === 'awards' && <Awards games={games} />}
       </main>
 
