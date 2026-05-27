@@ -4,11 +4,13 @@
 
 html {
   height: 100dvh;
+  background-color: #09090b;
 }
 
 body, #root {
   height: 100%;
   overflow: hidden;
+  background-color: #09090b;
 }
 
 /* スクロールエリアの iOS バウンス抑制 */

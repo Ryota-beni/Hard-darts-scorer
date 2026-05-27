@@ -31,7 +31,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-dvh max-w-sm mx-auto bg-zinc-950 text-white select-none">
+    <div className="flex flex-col h-dvh max-w-sm mx-auto bg-zinc-950 text-white select-none pt-[env(safe-area-inset-top)]">
       <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {activeTab === 'stats' && <Dashboard games={games} />}
         {activeTab === 'game' && <GameView onLegSave={handleLegSave} onMatchComplete={handleMatchComplete} />}
