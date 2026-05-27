@@ -2,9 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
+html {
+  height: 100dvh;
+}
+
+body, #root {
   height: 100%;
   overflow: hidden;
+}
+
+/* スクロールエリアの iOS バウンス抑制 */
+main {
+  overscroll-behavior-y: contain;
 }
 
 * {

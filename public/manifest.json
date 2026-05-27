@@ -1,0 +1,10 @@
+{
+  "name": "Hard Darts Scorer",
+  "short_name": "Darts",
+  "description": "Hard darts stats tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "portrait-primary"
+}

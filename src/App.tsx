@@ -31,7 +31,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-sm mx-auto bg-zinc-950 text-white select-none">
+    <div className="flex flex-col h-dvh max-w-sm mx-auto bg-zinc-950 text-white select-none">
       <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {activeTab === 'stats' && <Dashboard games={games} />}
         {activeTab === 'game' && <GameView onLegSave={handleLegSave} onMatchComplete={handleMatchComplete} />}
@@ -39,7 +39,7 @@ export default function App() {
         {activeTab === 'awards' && <Awards games={games} />}
       </main>
 
-      <nav className="flex-shrink-0 bg-zinc-900 border-t border-zinc-800 flex">
+      <nav className="flex-shrink-0 bg-zinc-900 border-t border-zinc-800 flex pb-[env(safe-area-inset-bottom)]">
         {(
           [
             { id: 'stats', label: 'Stats', icon: '📊' },
