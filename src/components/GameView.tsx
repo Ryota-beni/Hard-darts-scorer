@@ -141,6 +141,27 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
     doFinalize(finalRounds, 'win', dart, score, finalPdi, finalDiScore);
   };
 
+  const handleUndo = () => {
+    if (rounds.length === 0) return;
+    const lastRound = rounds[rounds.length - 1];
+    const newRounds = rounds.slice(0, -1);
+    setRounds(newRounds);
+
+    // Singles/Practice: 残り点数を再計算
+    if (gameType === 'singles' || gameType === 'practice') {
+      setRemaining(501 - newRounds.reduce((s, r) => s + r.score, 0));
+    }
+
+    // Doubles: doubleIn だったラウンドを戻す
+    if (lastRound.doubleIn) {
+      setPersonalDoubleIn(false);
+      setDoubleInRoundScore(null);
+    }
+
+    setNcoActive(false);
+    setInputError('');
+  };
+
   const toggleNCO = () => {
     if (!ncoActive) {
       setNcoCount((p) => p + 1);
@@ -401,27 +422,37 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
       </div>
 
       {/* Round history */}
-      <div className="flex-shrink-0 h-10 bg-zinc-950 px-4 flex items-center gap-1.5 overflow-x-auto">
-        {rounds.length === 0 ? (
-          <span className="text-zinc-700 text-xs">スコア履歴</span>
-        ) : (
-          rounds.slice(-10).map((r, i) => (
-            <span
-              key={i}
-              className={`flex-shrink-0 text-xs px-2 py-1 rounded font-mono ${
-                r.score === 180
-                  ? 'bg-yellow-700 text-yellow-100 font-bold'
-                  : r.score >= 140
-                  ? 'bg-orange-900 text-orange-200'
-                  : r.score >= 100
-                  ? 'bg-blue-900 text-blue-200'
-                  : 'bg-zinc-800 text-zinc-300'
-              }`}
-            >
-              {r.score}
-              {r.doubleIn && <span className="text-purple-400">●</span>}
-            </span>
-          ))
+      <div className="flex-shrink-0 h-10 bg-zinc-950 flex items-center">
+        <div className="flex-1 overflow-x-auto px-4 flex items-center gap-1.5">
+          {rounds.length === 0 ? (
+            <span className="text-zinc-700 text-xs">スコア履歴</span>
+          ) : (
+            rounds.slice(-10).map((r, i) => (
+              <span
+                key={i}
+                className={`flex-shrink-0 text-xs px-2 py-1 rounded font-mono ${
+                  r.score === 180
+                    ? 'bg-yellow-700 text-yellow-100 font-bold'
+                    : r.score >= 140
+                    ? 'bg-orange-900 text-orange-200'
+                    : r.score >= 100
+                    ? 'bg-blue-900 text-blue-200'
+                    : 'bg-zinc-800 text-zinc-300'
+                }`}
+              >
+                {r.score}
+                {r.doubleIn && <span className="text-purple-400">●</span>}
+              </span>
+            ))
+          )}
+        </div>
+        {rounds.length > 0 && (
+          <button
+            onClick={handleUndo}
+            className="flex-shrink-0 h-full px-3 text-zinc-500 active:text-red-400 border-l border-zinc-800 text-xs font-semibold"
+          >
+            取消
+          </button>
         )}
       </div>
 
