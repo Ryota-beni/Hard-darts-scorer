@@ -103,8 +103,9 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
     } else {
       // score > 0 かつ Double In 選択中 → 自分がオープン成功
       const isDoubleIn = gameType === 'doubles' && doubleInPending && !personalDoubleIn && score > 0;
-      // Double In 選択中だが 0 点 → オープン失敗
-      const isFailedDoubleIn = gameType === 'doubles' && doubleInPending && !personalDoubleIn && score === 0;
+      // ゲーム未オープン（まだ誰も score > 0 を出していない）かつ 0 点 → ダブルイン失敗
+      const gameAlreadyOpen = rounds.some((r) => r.score > 0);
+      const isFailedDoubleIn = gameType === 'doubles' && !personalDoubleIn && !gameAlreadyOpen && score === 0;
       const round: Round = {
         score,
         darts: 3,
