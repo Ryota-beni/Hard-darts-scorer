@@ -178,8 +178,8 @@ function GameRow({
                 <p className="font-bold text-zinc-200">{game.totalPoints}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">ダーツ</p>
-                <p className="font-bold text-zinc-200">{game.totalDarts}本</p>
+                <p className="text-xs text-zinc-500">Darts</p>
+                <p className="font-bold text-zinc-200">{game.totalDarts}<span className="text-xs text-zinc-500 ml-0.5">darts</span></p>
               </div>
               <div>
                 <p className="text-xs text-zinc-500">NCO</p>
@@ -194,11 +194,6 @@ function GameRow({
               </div>
             )}
 
-            {game.checkoutDart && (
-              <p className="text-xs text-zinc-400 text-center">
-                チェックアウト: {game.checkoutDart}本目
-              </p>
-            )}
 
             <div className="flex flex-wrap gap-1.5">
               {game.awards.oneEighty > 0 && (
