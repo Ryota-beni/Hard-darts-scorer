@@ -25,15 +25,19 @@ export default function Awards({ games }: Props) {
   // 有効ラウンド = 全ラウンド数 − NCO数（ラウンドデータがあるゲームのみ）
   let totalRounds = 0;
   let totalNco = 0;
+  let sixtyPlusCount = 0;
   for (const g of displayGames) {
     if (g.rounds.length > 0) {
       totalRounds += g.rounds.length;
       totalNco += g.noCheckouts;
+      sixtyPlusCount += g.rounds.filter((r) => r.score >= 60 && r.score < 100).length;
     }
   }
   const effectiveRounds = Math.max(1, totalRounds - totalNco);
+  const h60Rate  = (sixtyPlusCount / effectiveRounds) * 100;
   const h100Rate = (totals.hundredPlus / effectiveRounds) * 100;
   const h140Rate = (totals.hundredFortyPlus / effectiveRounds) * 100;
+  const h180Rate = (totals.oneEighty / effectiveRounds) * 100;
 
   return (
     <div className="p-4 pb-6 space-y-3">
@@ -82,8 +86,10 @@ export default function Awards({ games }: Props) {
         <p className="text-xs text-zinc-700 mb-3">
           有効{effectiveRounds}R（全{totalRounds}R − NCO {totalNco}回）
         </p>
+        <RateRow label="60+"  rate={h60Rate}  color="bg-zinc-400" />
         <RateRow label="100+" rate={h100Rate} color="bg-blue-500" />
         <RateRow label="140+" rate={h140Rate} color="bg-orange-500" />
+        <RateRow label="180"  rate={h180Rate} color="bg-yellow-400" />
       </div>
     </div>
   );
