@@ -66,25 +66,35 @@ export default function Dashboard({ games }: Props) {
             {stats.flight}
           </p>
 
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <p className="text-xs text-zinc-500 uppercase tracking-widest">PPR</p>
-            <p className="font-display text-5xl tabular-nums text-white leading-none">
-              {stats.ppr.toFixed(2)}
-            </p>
-          </div>
+          {stats.first9 != null ? (
+            <div className="mt-4 flex justify-center gap-8">
+              <div className="text-center">
+                <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">PPR</p>
+                <p className="font-display text-4xl tabular-nums text-white leading-none">
+                  {stats.ppr.toFixed(2)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">First 9</p>
+                <p className="font-display text-4xl tabular-nums text-yellow-300 leading-none">
+                  {stats.first9.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <p className="text-xs text-zinc-500 uppercase tracking-widest">PPR</p>
+              <p className="font-display text-5xl tabular-nums text-white leading-none">
+                {stats.ppr.toFixed(2)}
+              </p>
+            </div>
+          )}
 
         </div>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          label="First 9"
-          value={stats.first9 != null ? stats.first9.toFixed(2) : '—'}
-          accent="text-yellow-400"
-          className="col-span-2"
-          center
-        />
         <StatCard
           label="Win"
           value={`${stats.wins}`}
