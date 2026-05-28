@@ -84,26 +84,32 @@ export default function Dashboard({ games }: Props) {
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
-          label="First 9"
-          value={stats.first9 != null ? stats.first9.toFixed(1) : '—'}
-          accent="text-yellow-400"
-        />
-        <StatCard
-          label="Win / Lose"
-          value={`${stats.wins} / ${stats.losses}`}
+          label="Win"
+          value={`${stats.wins}`}
           accent="text-emerald-400"
         />
         <StatCard
-          label="チェックアウト率"
+          label="Lose"
+          value={`${stats.losses}`}
+          accent="text-red-400"
+        />
+        <StatCard
+          label="First 9"
+          value={stats.first9 != null ? stats.first9.toFixed(2) : '—'}
+          accent="text-yellow-400"
+        />
+        <StatCard
+          label="Check out %"
           value={stats.checkoutRate != null ? `${stats.checkoutRate.toFixed(1)}%` : '—'}
           sub={stats.checkoutOpportunities > 0 ? `${stats.checkoutSuccesses} / ${stats.checkoutOpportunities}` : undefined}
           accent="text-cyan-400"
         />
         <StatCard
-          label="オープン率"
+          label="Open %"
           value={stats.openRate != null ? `${stats.openRate.toFixed(1)}%` : '—'}
           sub={stats.openTotal > 0 ? `${stats.openSuccesses} / ${stats.openTotal}` : undefined}
           accent="text-purple-400"
+          className="col-span-2"
         />
       </div>
 
@@ -165,14 +171,16 @@ function StatCard({
   value,
   sub,
   accent,
+  className = '',
 }: {
   label: string;
   value: string;
   sub?: string;
   accent: string;
+  className?: string;
 }) {
   return (
-    <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+    <div className={`bg-zinc-900 rounded-2xl p-4 border border-zinc-800 ${className}`}>
       <p className="text-xs text-zinc-500 mb-1">{label}</p>
       <p className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</p>
       {sub && <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">{sub}</p>}
