@@ -188,23 +188,24 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
     finalPdi = personalDoubleIn,
     finalDiScore = doubleInRoundScore
   ) => {
-    const ppr = calcGamePPR(finalRounds);
+    // ダブルイン失敗ラウンド（doubleInAttempt）はスタッツから除外
+    const scoringRounds = finalRounds.filter((r) => !r.doubleInAttempt);
+    const ppr = calcGamePPR(scoringRounds);
 
     let first9: number | undefined;
-    if ((gameType === 'singles' || gameType === 'practice') && finalRounds.length >= 3) {
-      first9 = finalRounds.slice(0, 3).reduce((s, r) => s + r.score, 0) / 3;
+    if ((gameType === 'singles' || gameType === 'practice') && scoringRounds.length >= 3) {
+      first9 = scoringRounds.slice(0, 3).reduce((s, r) => s + r.score, 0) / 3;
     }
 
     let hundredPlus = 0, hundredFortyPlus = 0, oneEighty = 0;
-    for (const r of finalRounds) {
+    for (const r of scoringRounds) {
       if (r.score === 180) oneEighty++;
       else if (r.score >= 140) hundredFortyPlus++;
       else if (r.score >= 100) hundredPlus++;
     }
 
-    const totalDarts = finalRounds.reduce((s, r) => s + r.darts, 0);
-    const shortDarts =
-      result === 'win' && (gameType === 'singles' || gameType === 'practice') && totalDarts <= 18;
+    const totalDarts = scoringRounds.reduce((s, r) => s + r.darts, 0);
+    const shortDarts = result === 'win' && gameType === 'singles' && totalDarts <= 21;
     const highOut = checkoutDart != null && (coScore ?? 0) >= 100;
     const highStart =
       gameType === 'doubles' && finalPdi && finalDiScore != null && finalDiScore >= 100;
@@ -214,11 +215,11 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
       type: gameType,
       date: new Date().toISOString(),
       result,
-      rounds: finalRounds,
+      rounds: finalRounds,                                          // 全ラウンド保存（ぽっち表示用）
       ...(checkoutDart != null ? { checkoutDart } : {}),
       noCheckouts: ncoCount,
-      totalPoints: finalRounds.reduce((s, r) => s + r.score, 0),
-      totalDarts,
+      totalPoints: scoringRounds.reduce((s, r) => s + r.score, 0), // 失敗ラウンド除外
+      totalDarts,                                                   // 失敗ラウンド除外
       ppr,
       ...(first9 != null ? { first9 } : {}),
       personalDoubleIn: finalPdi,

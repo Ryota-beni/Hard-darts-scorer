@@ -105,7 +105,7 @@ export default function ManualEntry({ onSave, onClose }: Props) {
         hundredPlus: parseInt(h100Str, 10) || 0,
         hundredFortyPlus: parseInt(h140Str, 10) || 0,
         oneEighty: parseInt(h180Str, 10) || 0,
-        shortDarts: result === 'win' && (gameType === 'singles' || gameType === 'practice') && totalDarts <= 18,
+        shortDarts: result === 'win' && gameType === 'singles' && totalDarts <= 21,
         highOut: personalCheckout ? highOut : false,
         highStart: gameType === 'doubles' && personalDoubleIn ? highStart : false,
       },
