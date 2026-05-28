@@ -84,6 +84,12 @@ export default function Dashboard({ games }: Props) {
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
+          label="First 9"
+          value={stats.first9 != null ? stats.first9.toFixed(2) : '—'}
+          accent="text-yellow-400"
+          className="col-span-2"
+        />
+        <StatCard
           label="Win"
           value={`${stats.wins}`}
           accent="text-emerald-400"
@@ -92,11 +98,6 @@ export default function Dashboard({ games }: Props) {
           label="Lose"
           value={`${stats.losses}`}
           accent="text-red-400"
-        />
-        <StatCard
-          label="First 9"
-          value={stats.first9 != null ? stats.first9.toFixed(2) : '—'}
-          accent="text-yellow-400"
         />
         <StatCard
           label="Check out %"
@@ -109,7 +110,6 @@ export default function Dashboard({ games }: Props) {
           value={stats.openRate != null ? `${stats.openRate.toFixed(1)}%` : '—'}
           sub={stats.openTotal > 0 ? `${stats.openSuccesses} / ${stats.openTotal}` : undefined}
           accent="text-purple-400"
-          className="col-span-2"
         />
       </div>
 
