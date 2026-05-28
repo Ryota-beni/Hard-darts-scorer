@@ -187,6 +187,23 @@ function GameRow({
               </div>
             </div>
 
+            {game.type === 'doubles' && (
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div>
+                  <p className="text-xs text-zinc-500">Double In 成功</p>
+                  <p className="font-bold text-purple-400">
+                    {game.rounds.filter((r) => r.doubleIn).length}回
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Double In 失敗</p>
+                  <p className="font-bold text-zinc-400">
+                    {game.rounds.filter((r) => r.doubleInAttempt).length}回
+                  </p>
+                </div>
+              </div>
+            )}
+
             {game.type === 'singles' && game.first9 != null && (
               <div className="text-center">
                 <p className="text-xs text-zinc-500">First 9</p>
