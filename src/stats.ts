@@ -136,10 +136,15 @@ export function calcDashboardStats(allGames: Game[]): DashboardStats {
   const checkoutTotal = personalCheckouts + totalNco;
   const checkoutRate = checkoutTotal > 0 ? (personalCheckouts / checkoutTotal) * 100 : null;
 
-  // Open rate: doubles games with personal double-in / total doubles games
+  // Open rate: ダブルイン成功ラウンド / (成功 + 失敗ラウンド) — ラウンド単位で集計
   const doublesGames = leagueGames.filter((g) => g.type === 'doubles');
-  const openSuccesses = doublesGames.filter((g) => g.personalDoubleIn).length;
-  const openTotal = doublesGames.length;
+  const openSuccesses = doublesGames.reduce(
+    (s, g) => s + g.rounds.filter((r) => r.doubleIn).length, 0
+  );
+  const openFailures = doublesGames.reduce(
+    (s, g) => s + g.rounds.filter((r) => r.doubleInAttempt).length, 0
+  );
+  const openTotal = openSuccesses + openFailures;
   const openRate = openTotal > 0 ? (openSuccesses / openTotal) * 100 : null;
 
   return {
