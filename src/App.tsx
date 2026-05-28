@@ -19,7 +19,7 @@ export default function App() {
   };
 
   const handleMatchComplete = () => {
-    setActiveTab('stats');
+    setActiveTab('game');
   };
 
   const handleDeleteGame = (id: string) => {

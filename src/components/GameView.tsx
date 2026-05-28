@@ -499,14 +499,14 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
           <button
             key={d}
             onClick={() => handleDigit(d)}
-            className="py-3 rounded-xl bg-zinc-800 active:bg-zinc-600 text-xl font-semibold"
+            className="py-4 rounded-xl bg-zinc-800 active:bg-zinc-600 text-2xl font-semibold"
           >
             {d}
           </button>
         ))}
-        <button onClick={() => handleDigit('0')} className="py-3 rounded-xl bg-zinc-800 active:bg-zinc-600 text-xl font-semibold">0</button>
-        <button onClick={handleDelete} className="py-3 rounded-xl bg-zinc-800 active:bg-zinc-600 text-xl">←</button>
-        <button onClick={handleSubmit} className="py-3 rounded-xl bg-zinc-700 active:bg-zinc-500 text-base font-bold text-cyan-300">入力</button>
+        <button onClick={() => handleDigit('0')} className="py-4 rounded-xl bg-zinc-800 active:bg-zinc-600 text-2xl font-semibold">0</button>
+        <button onClick={handleDelete} className="py-4 rounded-xl bg-zinc-800 active:bg-zinc-600 text-2xl">←</button>
+        <button onClick={handleSubmit} className="py-4 rounded-xl bg-zinc-700 active:bg-zinc-500 text-lg font-bold text-cyan-300">入力</button>
       </div>
 
       {/* Controls */}
@@ -530,7 +530,7 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
                   : 'bg-transparent border-purple-900 text-purple-400'
               }`}
             >
-              {doubleInPending ? '● Double In（このラウンドに確定）' : 'Double In'}
+              {doubleInPending ? '● Double In' : 'Double In'}
             </button>
           );
         })()}

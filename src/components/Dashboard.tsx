@@ -59,36 +59,29 @@ export default function Dashboard({ games }: Props) {
         {/* コンテンツ */}
         <div className="relative z-10 p-6">
           <p className="text-xs text-zinc-600 uppercase tracking-widest mb-1">Rating</p>
-          <p className="font-display text-7xl tabular-nums text-white leading-none">
+          <p className="font-display text-7xl tabular-nums text-zinc-200 leading-none">
             {rtDecimal.toFixed(2)}
           </p>
           <p className="font-display text-3xl mt-2" style={{ color: flightTextColor }}>
             {stats.flight}
           </p>
 
-          {stats.first9 != null ? (
-            <div className="mt-4 flex justify-center gap-8">
-              <div className="text-center">
-                <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">PPR</p>
-                <p className="font-display text-4xl tabular-nums text-white leading-none">
-                  {stats.ppr.toFixed(2)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">First 9</p>
-                <p className="font-display text-4xl tabular-nums text-yellow-300 leading-none">
-                  {stats.first9.toFixed(2)}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-widest">PPR</p>
-              <p className="font-display text-5xl tabular-nums text-white leading-none">
+          <div className="mt-4 space-y-3">
+            <div className="text-center">
+              <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">PPR</p>
+              <p className="font-display text-5xl tabular-nums text-zinc-200 leading-none">
                 {stats.ppr.toFixed(2)}
               </p>
             </div>
-          )}
+            {stats.first9 != null && (
+              <div className="text-center">
+                <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">First 9</p>
+                <p className="font-display text-4xl tabular-nums text-zinc-200 leading-none">
+                  {stats.first9.toFixed(2)}
+                </p>
+              </div>
+            )}
+          </div>
 
         </div>
       </div>
