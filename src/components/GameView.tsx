@@ -97,7 +97,7 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
         return;
       }
       setRounds((p) => [...p, { score, darts: 3, ...(ncoActive ? { nco: true } : {}) }]);
-      if (ncoActive) setNcoActive(false);
+      if (ncoActive) setNcoCount((p) => p + 1);
       setRemaining(newRemaining);
       setInput('');
     } else {
@@ -117,7 +117,7 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
         setPersonalDoubleIn(true);
         setDoubleInRoundScore(score);
       }
-      if (ncoActive) setNcoActive(false);
+      if (ncoActive) setNcoCount((p) => p + 1);
       setInput('');
       setDoubleInPending(false);
     }
@@ -169,17 +169,14 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
       setDoubleInRoundScore(null);
     }
 
-    setNcoActive(false);
+    // NCO カウントを戻す
+    if (lastRound.nco) setNcoCount((p) => Math.max(0, p - 1));
+
     setInputError('');
   };
 
   const toggleNCO = () => {
-    if (!ncoActive) {
-      setNcoCount((p) => p + 1);
-      setNcoActive(true);
-    } else {
-      setNcoActive(false);
-    }
+    setNcoActive((p) => !p);
   };
 
   const doFinalize = (
