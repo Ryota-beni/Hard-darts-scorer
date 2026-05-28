@@ -73,11 +73,6 @@ export default function Dashboard({ games }: Props) {
             </p>
           </div>
 
-          {/* RT ラベル */}
-          <div className="mt-4 flex justify-between text-xs px-1">
-            <span className="text-zinc-500">RT {stats.rt}</span>
-            <span className="text-zinc-700">{stats.rt < 25 ? `RT ${stats.rt + 1}` : 'MAX'}</span>
-          </div>
         </div>
       </div>
 
@@ -88,6 +83,7 @@ export default function Dashboard({ games }: Props) {
           value={stats.first9 != null ? stats.first9.toFixed(2) : '—'}
           accent="text-yellow-400"
           className="col-span-2"
+          center
         />
         <StatCard
           label="Win"
@@ -172,15 +168,17 @@ function StatCard({
   sub,
   accent,
   className = '',
+  center = false,
 }: {
   label: string;
   value: string;
   sub?: string;
   accent: string;
   className?: string;
+  center?: boolean;
 }) {
   return (
-    <div className={`bg-zinc-900 rounded-2xl p-4 border border-zinc-800 ${className}`}>
+    <div className={`bg-zinc-900 rounded-2xl p-4 border border-zinc-800 ${center ? 'text-center' : ''} ${className}`}>
       <p className="text-xs text-zinc-500 mb-1">{label}</p>
       <p className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</p>
       {sub && <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">{sub}</p>}
