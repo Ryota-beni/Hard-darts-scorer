@@ -100,7 +100,8 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
       setRemaining(newRemaining);
       setInput('');
     } else {
-      const isDoubleIn = gameType === 'doubles' && doubleInPending && !personalDoubleIn;
+      // score > 0 かつ Double In 選択中 → 自分がオープン
+      const isDoubleIn = gameType === 'doubles' && doubleInPending && !personalDoubleIn && score > 0;
       const round: Round = { score, darts: 3, ...(isDoubleIn ? { doubleIn: true } : {}) };
       setRounds((p) => [...p, round]);
       if (isDoubleIn) {
@@ -499,21 +500,29 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
 
       {/* Controls */}
       <div className="flex-1 flex flex-col gap-2 px-4 pt-2 pb-3 justify-end">
-        {gameType === 'doubles' && !personalDoubleIn && (
-          <button
-            onClick={() => setDoubleInPending((p) => !p)}
-            className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors ${
-              doubleInPending
-                ? 'bg-purple-800 border-purple-500 text-white'
-                : 'bg-transparent border-purple-900 text-purple-400'
-            }`}
-          >
-            {doubleInPending ? '● Double In（このラウンドに確定）' : 'Double In'}
-          </button>
-        )}
-        {gameType === 'doubles' && personalDoubleIn && (
-          <div className="text-center text-xs text-purple-400 py-1">✓ Double In 済み</div>
-        )}
+        {(() => {
+          const gameOpened = rounds.some((r) => r.score > 0);
+          if (gameType !== 'doubles') return null;
+          if (personalDoubleIn) {
+            return <div className="text-center text-xs text-purple-400 py-1">✓ Double In 済み</div>;
+          }
+          if (gameOpened) {
+            // 相方がオープン済み → ボタン不要
+            return <div className="text-center text-xs text-zinc-600 py-1">相方がオープン済み</div>;
+          }
+          return (
+            <button
+              onClick={() => setDoubleInPending((p) => !p)}
+              className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                doubleInPending
+                  ? 'bg-purple-800 border-purple-500 text-white'
+                  : 'bg-transparent border-purple-900 text-purple-400'
+              }`}
+            >
+              {doubleInPending ? '● Double In（このラウンドに確定）' : 'Double In'}
+            </button>
+          );
+        })()}
 
         <button
           onClick={toggleNCO}
