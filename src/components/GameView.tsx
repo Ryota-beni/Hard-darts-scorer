@@ -549,7 +549,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
               : 'bg-transparent border-zinc-700 text-zinc-400'
           }`}
         >
-          No Check Out
+          Try
         </button>
 
         <button
