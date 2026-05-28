@@ -96,18 +96,28 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
         setCheckoutPopup(true);
         return;
       }
-      setRounds((p) => [...p, { score, darts: 3 }]);
+      setRounds((p) => [...p, { score, darts: 3, ...(ncoActive ? { nco: true } : {}) }]);
+      if (ncoActive) setNcoActive(false);
       setRemaining(newRemaining);
       setInput('');
     } else {
-      // score > 0 かつ Double In 選択中 → 自分がオープン
+      // score > 0 かつ Double In 選択中 → 自分がオープン成功
       const isDoubleIn = gameType === 'doubles' && doubleInPending && !personalDoubleIn && score > 0;
-      const round: Round = { score, darts: 3, ...(isDoubleIn ? { doubleIn: true } : {}) };
+      // Double In 選択中だが 0 点 → オープン失敗
+      const isFailedDoubleIn = gameType === 'doubles' && doubleInPending && !personalDoubleIn && score === 0;
+      const round: Round = {
+        score,
+        darts: 3,
+        ...(isDoubleIn       ? { doubleIn: true }        : {}),
+        ...(isFailedDoubleIn ? { doubleInAttempt: true }  : {}),
+        ...(ncoActive        ? { nco: true }              : {}),
+      };
       setRounds((p) => [...p, round]);
       if (isDoubleIn) {
         setPersonalDoubleIn(true);
         setDoubleInRoundScore(score);
       }
+      if (ncoActive) setNcoActive(false);
       setInput('');
       setDoubleInPending(false);
     }
@@ -442,7 +452,9 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
                 }`}
               >
                 {r.score}
-                {r.doubleIn && <span className="text-purple-400">●</span>}
+                {r.doubleIn        && <span className="text-purple-400">●</span>}
+                {r.doubleInAttempt && <span className="text-purple-800">●</span>}
+                {r.nco             && <span className="text-amber-500">●</span>}
               </span>
             ))
           )}

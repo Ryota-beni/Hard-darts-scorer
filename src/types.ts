@@ -3,7 +3,9 @@ export type GameType = 'gallon' | 'singles' | 'doubles' | 'practice';
 export interface Round {
   score: number;
   darts: number; // 1-3
-  doubleIn?: boolean; // doubles only: personal double-in happened this round
+  doubleIn?: boolean;        // doubles: 自分がオープン成功
+  doubleInAttempt?: boolean; // doubles: DoubleIn ボタンを押したが 0 点（失敗）
+  nco?: boolean;             // チェックアウトをトライしたが失敗
 }
 
 export interface GameAwards {

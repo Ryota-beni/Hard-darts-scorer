@@ -240,7 +240,9 @@ function GameRow({
                     >
                       {r.score}
                       {r.darts < 3 && <span className="text-zinc-400">/{r.darts}</span>}
-                      {r.doubleIn && <span className="text-purple-400">●</span>}
+                      {r.doubleIn        && <span className="text-purple-400">●</span>}
+                      {r.doubleInAttempt && <span className="text-purple-800">●</span>}
+                      {r.nco             && <span className="text-amber-500">●</span>}
                     </span>
                   ))}
                 </div>
