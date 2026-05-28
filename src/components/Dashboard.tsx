@@ -86,25 +86,23 @@ export default function Dashboard({ games }: Props) {
         <StatCard
           label="First 9"
           value={stats.first9 != null ? stats.first9.toFixed(1) : '—'}
-          sub="Singles · 最初3R平均"
           accent="text-yellow-400"
         />
         <StatCard
           label="Win / Lose"
           value={`${stats.wins} / ${stats.losses}`}
-          sub={`${stats.totalGames} games`}
           accent="text-emerald-400"
         />
         <StatCard
           label="チェックアウト率"
           value={stats.checkoutRate != null ? `${stats.checkoutRate.toFixed(1)}%` : '—'}
-          sub="成功 / 機会"
+          sub={stats.checkoutOpportunities > 0 ? `${stats.checkoutSuccesses} / ${stats.checkoutOpportunities}` : undefined}
           accent="text-cyan-400"
         />
         <StatCard
           label="オープン率"
           value={stats.openRate != null ? `${stats.openRate.toFixed(1)}%` : '—'}
-          sub="Doubles · DoubleIn成功率"
+          sub={stats.openTotal > 0 ? `${stats.openSuccesses} / ${stats.openTotal}` : undefined}
           accent="text-purple-400"
         />
       </div>
@@ -170,14 +168,14 @@ function StatCard({
 }: {
   label: string;
   value: string;
-  sub: string;
+  sub?: string;
   accent: string;
 }) {
   return (
     <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
       <p className="text-xs text-zinc-500 mb-1">{label}</p>
       <p className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</p>
-      <p className="text-xs text-zinc-600 mt-0.5">{sub}</p>
+      {sub && <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">{sub}</p>}
     </div>
   );
 }

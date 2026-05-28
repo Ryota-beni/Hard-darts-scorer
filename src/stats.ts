@@ -95,11 +95,15 @@ export interface DashboardStats {
   flight: string;
   first9: number | null;
   checkoutRate: number | null;
+  checkoutSuccesses: number;
+  checkoutOpportunities: number;
   openRate: number | null;
+  openSuccesses: number;
+  openTotal: number;
   wins: number;
   losses: number;
   totalGames: number;
-  gamesForRating: number; // how many games used for rating
+  gamesForRating: number;
 }
 
 export function calcDashboardStats(allGames: Game[]): DashboardStats {
@@ -134,10 +138,9 @@ export function calcDashboardStats(allGames: Game[]): DashboardStats {
 
   // Open rate: doubles games with personal double-in / total doubles games
   const doublesGames = leagueGames.filter((g) => g.type === 'doubles');
-  const openRate =
-    doublesGames.length > 0
-      ? (doublesGames.filter((g) => g.personalDoubleIn).length / doublesGames.length) * 100
-      : null;
+  const openSuccesses = doublesGames.filter((g) => g.personalDoubleIn).length;
+  const openTotal = doublesGames.length;
+  const openRate = openTotal > 0 ? (openSuccesses / openTotal) * 100 : null;
 
   return {
     ppr,
@@ -145,7 +148,11 @@ export function calcDashboardStats(allGames: Game[]): DashboardStats {
     flight: rating.flight,
     first9,
     checkoutRate,
+    checkoutSuccesses: personalCheckouts,
+    checkoutOpportunities: checkoutTotal,
     openRate,
+    openSuccesses,
+    openTotal,
     wins,
     losses,
     totalGames: leagueGames.length,
