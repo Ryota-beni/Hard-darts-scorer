@@ -5,10 +5,16 @@ import { calcGamePPR } from '../stats';
 interface Props {
   onLegSave: (game: Game) => void;
   onMatchComplete: () => void;
+  onPhaseChange?: (phase: 'select' | 'playing' | 'between') => void;
 }
 
-export default function GameView({ onLegSave, onMatchComplete }: Props) {
+export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: Props) {
   const [phase, setPhase] = useState<'select' | 'playing' | 'between'>('select');
+
+  const changePhase = (next: 'select' | 'playing' | 'between') => {
+    setPhase(next);
+    onPhaseChange?.(next);
+  };
   const [gameType, setGameType] = useState<GameType>('singles');
 
   // Leg内状態
@@ -54,12 +60,12 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
     setLegNumber(1);
     setPlayerLegs(0);
     setOppLegs(0);
-    setPhase('playing');
+    changePhase('playing');
   };
 
   const startNextLeg = () => {
     resetLegState();
-    setPhase('playing');
+    changePhase('playing');
   };
 
   const handleDigit = (d: string) => {
@@ -230,7 +236,7 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
 
     if (gameType === 'gallon') {
       onMatchComplete();
-      setPhase('select');
+      changePhase('select');
       return;
     }
 
@@ -242,15 +248,15 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
     setLegNumber((n) => n + 1);
 
     if (gameType === 'practice') {
-      setPhase('between');
+      changePhase('between');
       return;
     }
 
     if (newPlayer === 2 || newOpp === 2) {
       onMatchComplete();
-      setPhase('select');
+      changePhase('select');
     } else {
-      setPhase('between');
+      changePhase('between');
     }
   };
 
@@ -337,7 +343,7 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
                   setLegNumber(1);
                   setPlayerLegs(0);
                   setOppLegs(0);
-                  setPhase('select');
+                  changePhase('select');
                 }}
                 className="w-full py-3 rounded-2xl bg-zinc-800 active:bg-zinc-700 font-semibold text-sm text-zinc-300"
               >
@@ -350,7 +356,7 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
                   setLegNumber(1);
                   setPlayerLegs(0);
                   setOppLegs(0);
-                  setPhase('select');
+                  changePhase('select');
                 }}
                 className="w-full py-2 text-zinc-600 text-sm active:text-zinc-400"
               >
@@ -407,7 +413,7 @@ export default function GameView({ onLegSave, onMatchComplete }: Props) {
       <div className="flex-shrink-0 bg-zinc-900 px-4 py-2.5 flex items-center justify-between border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setPhase('select')}
+            onClick={() => changePhase('select')}
             className="text-zinc-500 active:text-white text-lg leading-none pr-1"
           >
             ←
