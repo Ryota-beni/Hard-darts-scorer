@@ -65,13 +65,14 @@ export default function App() {
     <div className="flex flex-col h-dvh max-w-sm mx-auto bg-zinc-950 text-white select-none pt-[env(safe-area-inset-top)]">
       <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {activeTab === 'stats' && <Dashboard games={games} />}
-        {activeTab === 'game' && (
+        {/* GameView は常にマウント、非表示時も状態を保持 */}
+        <div className={activeTab === 'game' ? 'h-full flex flex-col' : 'hidden'}>
           <GameView
             onLegSave={handleLegSave}
             onMatchComplete={handleMatchComplete}
             onPhaseChange={setGamePhase}
           />
-        )}
+        </div>
         {activeTab === 'history' && <History games={games} onAddGame={handleAddGame} onDeleteGame={handleDeleteGame} />}
         {activeTab === 'awards' && <Awards games={games} />}
       </main>
@@ -106,7 +107,7 @@ export default function App() {
           <div className="w-full max-w-xs bg-zinc-900 rounded-2xl border border-zinc-700 p-6">
             <p className="text-base font-bold text-center mb-2">ゲームを中断しますか？</p>
             <p className="text-sm text-zinc-400 text-center mb-6">
-              入力中のデータは失われます
+              Gameタブに戻ると再開できます
             </p>
             <div className="flex gap-3">
               <button
