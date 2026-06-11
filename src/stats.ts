@@ -65,7 +65,13 @@ export function getFlightBadgeClass(flight: string): string {
 }
 
 export function getRating(ppr: number): RatingEntry {
-  return RATING_TABLE.find((e) => ppr >= e.min && ppr <= e.max) ?? RATING_TABLE[0];
+  if (ppr <= 0) return RATING_TABLE[0];
+  // ブラケット間の 0.01 の隙間（例: 45.53〜45.54）に落ちても
+  // 取りこぼさないよう、max が ppr 以上になる最初のブラケットを返す
+  for (const e of RATING_TABLE) {
+    if (ppr <= e.max) return e;
+  }
+  return RATING_TABLE[RATING_TABLE.length - 1];
 }
 
 /**
@@ -77,7 +83,8 @@ export function getRatingDecimal(ppr: number): number {
   if (entry.max === Infinity) return 25.00; // S flight 上限なし
   const range = entry.max - entry.min;
   if (range <= 0) return entry.rt;
-  const fraction = Math.min(0.99, (ppr - entry.min) / range);
+  // 隙間に入った PPR で fraction が負にならないよう 0〜0.99 にクランプ
+  const fraction = Math.max(0, Math.min(0.99, (ppr - entry.min) / range));
   return entry.rt + fraction;
 }
 
