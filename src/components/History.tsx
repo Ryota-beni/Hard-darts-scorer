@@ -69,8 +69,9 @@ function GameRow({
 }) {
   const [swipeX, setSwipeX] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const touchStartX = useRef(0);
-  const THRESHOLD = 80;
+  const THRESHOLD = 100;
 
   const typeName =
     game.type === 'singles' ? 'Singles'
@@ -122,10 +123,9 @@ function GameRow({
         onTouchEnd={() => {
           setIsSwiping(false);
           if (swipeX >= THRESHOLD) {
-            onDelete();
-          } else {
-            setSwipeX(0);
+            setConfirmDelete(true);
           }
+          setSwipeX(0);
         }}
         className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden"
       >
@@ -246,6 +246,41 @@ function GameRow({
           </div>
         )}
       </div>
+
+      {/* 削除確認ダイアログ */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6"
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div
+            className="w-full max-w-xs bg-zinc-900 rounded-2xl border border-zinc-700 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-base font-bold text-center mb-2">この履歴を削除しますか？</p>
+            <p className="text-sm text-zinc-400 text-center mb-6">
+              {typeName} · {dateStr}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 py-3 rounded-xl bg-zinc-800 active:bg-zinc-700 font-semibold text-sm text-zinc-300"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmDelete(false);
+                  onDelete();
+                }}
+                className="flex-1 py-3 rounded-xl bg-red-700 active:bg-red-600 font-bold text-sm text-white"
+              >
+                削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
