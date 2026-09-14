@@ -110,6 +110,13 @@ export default function Dashboard({ games }: Props) {
           sub={stats.openTotal > 0 ? `${stats.openSuccesses} / ${stats.openTotal}` : undefined}
           accent="text-purple-400"
         />
+        <StatCard
+          label="Cork %"
+          value={stats.corkRate != null ? `${stats.corkRate.toFixed(1)}%` : '—'}
+          sub={stats.corkTotal > 0 ? `${stats.corkWins} / ${stats.corkTotal}` : undefined}
+          accent="text-amber-400"
+          className="col-span-2"
+        />
       </div>
 
       {/* Recent games */}

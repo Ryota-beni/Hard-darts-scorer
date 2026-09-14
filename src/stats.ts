@@ -107,6 +107,9 @@ export interface DashboardStats {
   openRate: number | null;
   openSuccesses: number;
   openTotal: number;
+  corkRate: number | null;
+  corkWins: number;
+  corkTotal: number;
   wins: number;
   losses: number;
   totalGames: number;
@@ -154,6 +157,14 @@ export function calcDashboardStats(allGames: Game[]): DashboardStats {
   const openTotal = openSuccesses + openFailures;
   const openRate = openTotal > 0 ? (openSuccesses / openTotal) * 100 : null;
 
+  // Cork rate: 先攻決め + 規定ラウンド後のコーク（自分が投げたもののみ記録されている）
+  const corkResults = leagueGames.flatMap((g) =>
+    [g.openingCork, g.limitCork].filter((c): c is 'win' | 'loss' => c != null)
+  );
+  const corkWins = corkResults.filter((c) => c === 'win').length;
+  const corkTotal = corkResults.length;
+  const corkRate = corkTotal > 0 ? (corkWins / corkTotal) * 100 : null;
+
   return {
     ppr,
     rt: rating.rt,
@@ -165,6 +176,9 @@ export function calcDashboardStats(allGames: Game[]): DashboardStats {
     openRate,
     openSuccesses,
     openTotal,
+    corkRate,
+    corkWins,
+    corkTotal,
     wins,
     losses,
     totalGames: leagueGames.length,

@@ -2,20 +2,44 @@ import { useState } from 'react';
 import { Game, GameType, Round } from '../types';
 import { calcGamePPR } from '../stats';
 
+export type GamePhase = 'select' | 'cork' | 'order' | 'playing' | 'between';
+
+const ORDER_LABELS = ['First', 'Second', 'Third', 'Fourth'];
+
 interface Props {
   onLegSave: (game: Game) => void;
   onMatchComplete: () => void;
-  onPhaseChange?: (phase: 'select' | 'playing' | 'between') => void;
+  onPhaseChange?: (phase: GamePhase) => void;
+}
+
+// Singles: 1人 45ダーツ = 15スロー
+const SINGLES_MAX_ROUNDS = 15;
+
+// 投げ順ごとの最大スロー数
+// Doubles: 2人で45ダーツ（15スロー）→ First 8 / Second 7
+// Gallon : 4人で90ダーツ（30スロー）→ First,Second 8 / Third,Fourth 7
+function getMaxRounds(type: GameType, order: number, resiting: boolean): number {
+  if (type === 'singles') return resiting ? Infinity : SINGLES_MAX_ROUNDS;
+  if (type === 'doubles') return order === 1 ? 8 : 7;
+  if (type === 'gallon') return order <= 2 ? 8 : 7;
+  return Infinity; // practice
 }
 
 export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: Props) {
-  const [phase, setPhase] = useState<'select' | 'playing' | 'between'>('select');
+  const [phase, setPhase] = useState<GamePhase>('select');
 
-  const changePhase = (next: 'select' | 'playing' | 'between') => {
+  const changePhase = (next: GamePhase) => {
     setPhase(next);
     onPhaseChange?.(next);
   };
   const [gameType, setGameType] = useState<GameType>('singles');
+  const [throwOrder, setThrowOrder] = useState(1);
+
+  // ダーツ数上限 → コーク
+  const [corkPopup, setCorkPopup] = useState(false);
+  // 先攻・後攻決めのコーク結果（null = コークなし / 他の人が投げた）
+  const [openingCork, setOpeningCork] = useState<'win' | 'loss' | null>(null);
+  const [resiting, setResiting] = useState(false);
 
   // Leg内状態
   const [rounds, setRounds] = useState<Round[]>([]);
@@ -52,7 +76,12 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setInputError('');
     setCheckoutPopup(false);
     setCheckoutScore(0);
+    setCorkPopup(false);
+    setResiting(false);
+    setOpeningCork(null);
   };
+
+  const needsOrder = (type: GameType) => type === 'doubles' || type === 'gallon';
 
   const startGame = (type: GameType) => {
     resetLegState();
@@ -60,12 +89,33 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setLegNumber(1);
     setPlayerLegs(0);
     setOppLegs(0);
-    changePhase('playing');
+    setThrowOrder(1);
+    changePhase(type === 'practice' ? 'playing' : 'cork');
   };
 
   const startNextLeg = () => {
     resetLegState();
+    changePhase(gameType === 'practice' ? 'playing' : 'cork');
+  };
+
+  const selectOpeningCork = (result: 'win' | 'loss' | null) => {
+    setOpeningCork(result);
+    changePhase(needsOrder(gameType) ? 'order' : 'playing');
+  };
+
+  const selectOrder = (order: number) => {
+    setThrowOrder(order);
     changePhase('playing');
+  };
+
+  const maxRounds = getMaxRounds(gameType, throwOrder, resiting);
+  const reachedLimit = rounds.length >= maxRounds;
+
+  // ラウンド追加後、上限に達したらコーク
+  const pushRound = (round: Round) => {
+    const next = [...rounds, round];
+    setRounds(next);
+    if (next.length >= maxRounds) setCorkPopup(true);
   };
 
   const handleDigit = (d: string) => {
@@ -80,6 +130,10 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   };
 
   const handleSubmit = () => {
+    if (reachedLimit) {
+      setCorkPopup(true);
+      return;
+    }
     if (!input) return;
     const score = parseInt(input, 10);
     if (isNaN(score) || score < 0 || score > 180) {
@@ -102,7 +156,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
         setCheckoutPopup(true);
         return;
       }
-      setRounds((p) => [...p, { score, darts: 3, ...(ncoActive ? { nco: true } : {}) }]);
+      pushRound({ score, darts: 3, ...(ncoActive ? { nco: true } : {}) });
       if (ncoActive) setNcoCount((p) => p + 1);
       setRemaining(newRemaining);
       setInput('');
@@ -119,7 +173,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
         ...(isFailedDoubleIn ? { doubleInAttempt: true }  : {}),
         ...(ncoActive        ? { nco: true }              : {}),
       };
-      setRounds((p) => [...p, round]);
+      pushRound(round);
       if (isDoubleIn) {
         setPersonalDoubleIn(true);
         setDoubleInRoundScore(score);
@@ -131,6 +185,10 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   };
 
   const handleCheckOutPress = () => {
+    if (reachedLimit) {
+      setCorkPopup(true);
+      return;
+    }
     if (!input) {
       setInputError('チェックアウトの点数を入力');
       return;
@@ -192,7 +250,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     checkoutDart?: 1 | 2 | 3,
     coScore?: number,
     finalPdi = personalDoubleIn,
-    finalDiScore = doubleInRoundScore
+    finalDiScore = doubleInRoundScore,
+    cork = false
   ) => {
     // ダブルイン失敗ラウンド（doubleInAttempt）はスタッツから除外
     const scoringRounds = finalRounds.filter((r) => !r.doubleInAttempt);
@@ -229,6 +288,9 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       ppr,
       ...(first9 != null ? { first9 } : {}),
       personalDoubleIn: finalPdi,
+      ...(needsOrder(gameType) ? { throwOrder } : {}),
+      ...(openingCork ? { openingCork } : {}),
+      ...(cork ? { limitCork: result } : {}),
       awards: { hundredPlus, hundredFortyPlus, oneEighty, shortDarts, highOut, highStart },
     };
 
@@ -263,6 +325,24 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   const handleWin  = () => doFinalize(rounds, 'win');
   const handleLose = () => doFinalize(rounds, 'loss');
 
+  const handleCork = (result: 'win' | 'loss') => {
+    setCorkPopup(false);
+    setInput('');
+    doFinalize(rounds, result, undefined, undefined, personalDoubleIn, doubleInRoundScore, true);
+  };
+
+  // Singles: リサイディング → 46ダーツ目以降も継続
+  const handleResiting = () => {
+    setResiting(true);
+    setCorkPopup(false);
+  };
+
+  // 入力ミスで上限に達した場合は直前のラウンドを戻せる
+  const handleCorkUndo = () => {
+    setCorkPopup(false);
+    handleUndo();
+  };
+
   const currentPPR = calcGamePPR(rounds);
 
   // ─── Select ──────────────────────────────────────────
@@ -281,6 +361,93 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       : gameType === 'practice'
       ? 'bg-green-900 text-green-300'
       : 'bg-amber-900 text-amber-300';
+
+  const setupHeader = (onBack: () => void) => (
+    <div className="flex-shrink-0 bg-zinc-900 px-4 py-2.5 flex items-center gap-2 border-b border-zinc-800">
+      <button
+        onClick={onBack}
+        className="text-zinc-500 active:text-white text-lg leading-none pr-1"
+      >
+        ←
+      </button>
+      <span className={`px-2 py-0.5 rounded text-xs font-bold ${typeBadge}`}>{typeName}</span>
+      {gameType !== 'gallon' && (
+        <span className="text-zinc-600 text-xs">Leg {legNumber}</span>
+      )}
+    </div>
+  );
+
+  // ─── Opening cork（先攻・後攻決め） ─────────────────
+  if (phase === 'cork') {
+    const isTeam = needsOrder(gameType);
+
+    return (
+      <div className="flex flex-col h-full">
+        {setupHeader(() => changePhase('select'))}
+
+        <div className="flex-1 flex flex-col justify-center px-6 gap-4">
+          <div className="text-center mb-2">
+            <p className="font-display text-4xl text-white">Cork</p>
+            <p className="text-sm text-zinc-500 mt-1">先攻・後攻を決めるコーク</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => selectOpeningCork('win')}
+              className="py-8 rounded-2xl bg-emerald-600 active:bg-emerald-500 font-bold text-2xl"
+            >
+              Win
+            </button>
+            <button
+              onClick={() => selectOpeningCork('loss')}
+              className="py-8 rounded-2xl bg-red-700 active:bg-red-600 font-bold text-2xl"
+            >
+              Lose
+            </button>
+          </div>
+          <button
+            onClick={() => selectOpeningCork(null)}
+            className="py-4 rounded-2xl bg-zinc-800 active:bg-zinc-700 border border-zinc-700 font-semibold text-base text-zinc-300"
+          >
+            {isTeam ? '他の人が投げた / コークなし' : 'コークなし'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Throw order ─────────────────────────────────────
+  if (phase === 'order') {
+    const orders = gameType === 'gallon' ? [1, 2, 3, 4] : [1, 2];
+    const orderBtn =
+      gameType === 'doubles'
+        ? 'border-purple-800 bg-purple-950 active:bg-purple-900 text-purple-200'
+        : 'border-amber-800 bg-amber-950 active:bg-amber-900 text-amber-200';
+
+    return (
+      <div className="flex flex-col h-full">
+        {setupHeader(() => changePhase('cork'))}
+
+        <div className="flex-1 flex flex-col justify-center px-6 gap-4">
+          <p className="text-center text-2xl font-bold mb-2">Throw Order</p>
+          <div className={`grid gap-3 ${orders.length === 4 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {orders.map((o) => {
+              const max = getMaxRounds(gameType, o, false);
+              return (
+                <button
+                  key={o}
+                  onClick={() => selectOrder(o)}
+                  className={`py-6 rounded-2xl border-2 ${orderBtn}`}
+                >
+                  <p className="font-display text-4xl leading-none">{ORDER_LABELS[o - 1]}</p>
+                  <p className="text-xs text-zinc-400 mt-2">{max}スロー</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ─── Between legs ────────────────────────────────────
   if (phase === 'between') {
@@ -409,6 +576,47 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
         </div>
       )}
 
+      {/* Cork popup（ダーツ数上限到達） */}
+      {corkPopup && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
+          <div className="w-full max-w-sm bg-zinc-900 rounded-t-2xl border-t border-zinc-700 px-5 pt-5 pb-8">
+            <p className="text-center text-xs text-zinc-500 uppercase tracking-widest mb-1">
+              {gameType === 'gallon' ? '90' : '45'} Darts
+            </p>
+            <p className="text-center font-display text-4xl text-white mb-1">Cork</p>
+            <p className="text-center text-xs text-zinc-500 mb-5">コークの結果を選択</p>
+            <div className="flex gap-3 mb-3">
+              <button
+                onClick={() => handleCork('win')}
+                className="flex-1 py-5 rounded-2xl bg-emerald-600 active:bg-emerald-500 font-bold text-xl"
+              >
+                Win
+              </button>
+              <button
+                onClick={() => handleCork('loss')}
+                className="flex-1 py-5 rounded-2xl bg-red-700 active:bg-red-600 font-bold text-xl"
+              >
+                Lose
+              </button>
+            </div>
+            {gameType === 'singles' && (
+              <button
+                onClick={handleResiting}
+                className="w-full py-3.5 mb-1 rounded-2xl bg-zinc-800 active:bg-zinc-700 border border-zinc-600 font-semibold text-base text-zinc-200"
+              >
+                リサイディング（続行）
+              </button>
+            )}
+            <button
+              onClick={handleCorkUndo}
+              className="w-full py-3 text-zinc-500 text-sm active:text-zinc-300"
+            >
+              直前のラウンドを取消
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex-shrink-0 bg-zinc-900 px-4 py-2.5 flex items-center justify-between border-b border-zinc-800">
         <div className="flex items-center gap-2">
@@ -422,7 +630,14 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
           {gameType !== 'gallon' && (
             <span className="text-zinc-600 text-xs">Leg {legNumber}</span>
           )}
-          <span className="text-zinc-400 text-sm">R{rounds.length + 1}</span>
+          {(gameType === 'doubles' || gameType === 'gallon') && (
+            <span className="text-zinc-600 text-xs">{ORDER_LABELS[throwOrder - 1]}</span>
+          )}
+          <span className="text-zinc-400 text-sm tabular-nums">
+            R{Math.min(rounds.length + 1, maxRounds)}
+            {maxRounds !== Infinity && <span className="text-zinc-600">/{maxRounds}</span>}
+          </span>
+          {resiting && <span className="text-xs text-amber-400">Resiting</span>}
         </div>
         <div className="flex items-center gap-3">
           {(gameType === 'singles' || gameType === 'doubles') && (

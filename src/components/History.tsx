@@ -143,6 +143,11 @@ function GameRow({
             <span className={`px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 ${typeBg}`}>
               {typeName}
             </span>
+            {game.limitCork && (
+              <span className="px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 bg-zinc-700 text-zinc-200">
+                Cork
+              </span>
+            )}
             <span className="text-xs text-zinc-500 truncate">{dateStr}</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -186,6 +191,13 @@ function GameRow({
                 <p className="font-bold text-zinc-200">{game.noCheckouts}</p>
               </div>
             </div>
+
+            {(game.openingCork || game.limitCork) && (
+              <div className="flex justify-center gap-4 text-xs">
+                {game.openingCork && <CorkResult label="先攻決めCork" result={game.openingCork} />}
+                {game.limitCork && <CorkResult label="決着Cork" result={game.limitCork} />}
+              </div>
+            )}
 
             {game.type === 'singles' && game.first9 != null && (
               <div className="text-center">
@@ -282,6 +294,17 @@ function GameRow({
         </div>
       )}
     </div>
+  );
+}
+
+function CorkResult({ label, result }: { label: string; result: 'win' | 'loss' }) {
+  return (
+    <span>
+      <span className="text-zinc-500">{label} </span>
+      <span className={`font-bold ${result === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
+        {result === 'win' ? 'WIN' : 'LOSE'}
+      </span>
+    </span>
   );
 }
 

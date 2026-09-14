@@ -30,5 +30,8 @@ export interface Game {
   ppr: number;
   first9?: number;          // singles only: avg of first 3 rounds
   personalDoubleIn: boolean; // doubles only (false for other types)
+  throwOrder?: number;       // doubles: 1-2 / gallon: 1-4
+  openingCork?: 'win' | 'loss'; // 先攻・後攻決めのコーク（自分が投げた時のみ）
+  limitCork?: 'win' | 'loss';   // 規定ラウンド投げ切り → コークで決着
   awards: GameAwards;
 }

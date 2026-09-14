@@ -5,7 +5,9 @@ const KEY = 'darts_games';
 export function loadGames(): Game[] {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Game[]) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    // "null" など配列以外が入っていても保存処理が壊れないようにする
+    return Array.isArray(parsed) ? (parsed as Game[]) : [];
   } catch {
     return [];
   }

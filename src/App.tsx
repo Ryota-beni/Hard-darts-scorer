@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Game } from './types';
 import { loadGames, saveGames } from './storage';
 import Dashboard from './components/Dashboard';
-import GameView from './components/GameView';
+import GameView, { GamePhase } from './components/GameView';
 import History from './components/History';
 import Awards from './components/Awards';
 
 type Tab = 'stats' | 'game' | 'history' | 'awards';
-type GamePhase = 'select' | 'playing' | 'between';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('game');
@@ -50,10 +49,8 @@ export default function App() {
   };
 
   const confirmLeave = () => {
-    if (pendingTab) {
-      setActiveTab(pendingTab);
-      setGamePhase('select');
-    }
+    // GameView は状態を保持したままなので phase はリセットしない
+    if (pendingTab) setActiveTab(pendingTab);
     setPendingTab(null);
   };
 
