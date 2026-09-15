@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Game, GameType, Round } from '../types';
 import { calcGamePPR } from '../stats';
 
-export type GamePhase = 'select' | 'cork' | 'order' | 'playing' | 'between';
+export type GamePhase = 'select' | 'setup' | 'playing' | 'between';
 
 const ORDER_LABELS = ['First', 'Second', 'Third', 'Fourth'];
 
@@ -37,8 +37,11 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
   // ダーツ数上限 → コーク
   const [corkPopup, setCorkPopup] = useState(false);
-  // 先攻・後攻決めのコーク結果（null = コークなし / 他の人が投げた）
+  // 先攻・後攻決めのコーク結果（null = No Throw）
   const [openingCork, setOpeningCork] = useState<'win' | 'loss' | null>(null);
+  // セットアップ画面での選択（未選択 = null）
+  const [corkChoice, setCorkChoice] = useState<'win' | 'loss' | 'none' | null>(null);
+  const [orderChoice, setOrderChoice] = useState<number | null>(null);
   const [resiting, setResiting] = useState(false);
 
   // Leg内状態
@@ -79,6 +82,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setCorkPopup(false);
     setResiting(false);
     setOpeningCork(null);
+    setCorkChoice(null);
+    setOrderChoice(null);
   };
 
   const needsOrder = (type: GameType) => type === 'doubles' || type === 'gallon';
@@ -90,21 +95,20 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setPlayerLegs(0);
     setOppLegs(0);
     setThrowOrder(1);
-    changePhase(type === 'practice' ? 'playing' : 'cork');
+    changePhase(type === 'practice' ? 'playing' : 'setup');
   };
 
   const startNextLeg = () => {
     resetLegState();
-    changePhase(gameType === 'practice' ? 'playing' : 'cork');
+    changePhase(gameType === 'practice' ? 'playing' : 'setup');
   };
 
-  const selectOpeningCork = (result: 'win' | 'loss' | null) => {
-    setOpeningCork(result);
-    changePhase(needsOrder(gameType) ? 'order' : 'playing');
-  };
+  const setupReady = corkChoice != null && (!needsOrder(gameType) || orderChoice != null);
 
-  const selectOrder = (order: number) => {
-    setThrowOrder(order);
+  const handleGameOn = () => {
+    if (!setupReady) return;
+    setOpeningCork(corkChoice === 'none' ? null : corkChoice);
+    if (orderChoice != null) setThrowOrder(orderChoice);
     changePhase('playing');
   };
 
@@ -377,73 +381,81 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     </div>
   );
 
-  // ─── Opening cork（先攻・後攻決め） ─────────────────
-  if (phase === 'cork') {
+  // ─── Setup（コーク + 投げ順） ───────────────────────
+  if (phase === 'setup') {
     const isTeam = needsOrder(gameType);
+    const orders = gameType === 'gallon' ? [1, 2, 3, 4] : [1, 2];
+    const selectedOrder =
+      gameType === 'doubles'
+        ? 'border-purple-400 bg-purple-800 text-white'
+        : 'border-amber-400 bg-amber-700 text-white';
+
+    const choiceBtn = (selected: boolean, selectedClass: string) =>
+      `rounded-2xl border-2 font-bold transition-colors ${
+        selected ? selectedClass : 'border-zinc-700 bg-zinc-900 text-zinc-400 active:bg-zinc-800'
+      }`;
 
     return (
       <div className="flex flex-col h-full">
         {setupHeader(() => changePhase('select'))}
 
-        <div className="flex-1 flex flex-col justify-center px-6 gap-4">
-          <div className="text-center mb-2">
-            <p className="font-display text-4xl text-white">Cork</p>
-            <p className="text-sm text-zinc-500 mt-1">先攻・後攻を決めるコーク</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4 space-y-8">
+          {/* Throw order */}
+          {isTeam && (
+            <section>
+              <p className="font-display text-3xl text-white mb-3">Throw Order</p>
+              <div className="grid grid-cols-2 gap-3">
+                {orders.map((o) => (
+                  <button
+                    key={o}
+                    onClick={() => setOrderChoice(o)}
+                    className={`py-5 ${choiceBtn(orderChoice === o, selectedOrder)}`}
+                  >
+                    <span className="font-display text-3xl leading-none">{ORDER_LABELS[o - 1]}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Cork */}
+          <section>
+            <p className="font-display text-3xl text-white mb-3">Cork</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setCorkChoice('win')}
+                className={`py-5 font-display text-3xl leading-none ${choiceBtn(corkChoice === 'win', 'border-emerald-400 bg-emerald-600 text-white')}`}
+              >
+                Win
+              </button>
+              <button
+                onClick={() => setCorkChoice('loss')}
+                className={`py-5 font-display text-3xl leading-none ${choiceBtn(corkChoice === 'loss', 'border-red-400 bg-red-700 text-white')}`}
+              >
+                Lose
+              </button>
+            </div>
             <button
-              onClick={() => selectOpeningCork('win')}
-              className="py-8 rounded-2xl bg-emerald-600 active:bg-emerald-500 font-bold text-2xl"
+              onClick={() => setCorkChoice('none')}
+              className={`w-full mt-3 py-5 font-display text-3xl leading-none ${choiceBtn(corkChoice === 'none', 'border-zinc-400 bg-zinc-700 text-white')}`}
             >
-              Win
+              No Throw
             </button>
-            <button
-              onClick={() => selectOpeningCork('loss')}
-              className="py-8 rounded-2xl bg-red-700 active:bg-red-600 font-bold text-2xl"
-            >
-              Lose
-            </button>
-          </div>
-          <button
-            onClick={() => selectOpeningCork(null)}
-            className="py-4 rounded-2xl bg-zinc-800 active:bg-zinc-700 border border-zinc-700 font-semibold text-base text-zinc-300"
-          >
-            {isTeam ? '他の人が投げた / コークなし' : 'コークなし'}
-          </button>
+          </section>
         </div>
-      </div>
-    );
-  }
 
-  // ─── Throw order ─────────────────────────────────────
-  if (phase === 'order') {
-    const orders = gameType === 'gallon' ? [1, 2, 3, 4] : [1, 2];
-    const orderBtn =
-      gameType === 'doubles'
-        ? 'border-purple-800 bg-purple-950 active:bg-purple-900 text-purple-200'
-        : 'border-amber-800 bg-amber-950 active:bg-amber-900 text-amber-200';
-
-    return (
-      <div className="flex flex-col h-full">
-        {setupHeader(() => changePhase('cork'))}
-
-        <div className="flex-1 flex flex-col justify-center px-6 gap-4">
-          <p className="text-center text-2xl font-bold mb-2">Throw Order</p>
-          <div className={`grid gap-3 ${orders.length === 4 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {orders.map((o) => {
-              const max = getMaxRounds(gameType, o, false);
-              return (
-                <button
-                  key={o}
-                  onClick={() => selectOrder(o)}
-                  className={`py-6 rounded-2xl border-2 ${orderBtn}`}
-                >
-                  <p className="font-display text-4xl leading-none">{ORDER_LABELS[o - 1]}</p>
-                  <p className="text-xs text-zinc-400 mt-2">{max}スロー</p>
-                </button>
-              );
-            })}
-          </div>
+        <div className="flex-shrink-0 px-6 pt-2 pb-4">
+          <button
+            onClick={handleGameOn}
+            disabled={!setupReady}
+            className={`w-full py-4 rounded-2xl font-display text-3xl transition-colors ${
+              setupReady
+                ? 'bg-emerald-600 active:bg-emerald-700 text-white'
+                : 'bg-zinc-800 text-zinc-600'
+            }`}
+          >
+            Game on!
+          </button>
         </div>
       </div>
     );
