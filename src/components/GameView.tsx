@@ -810,23 +810,23 @@ function GameSelect({ onStart }: { onStart: (type: GameType) => void }) {
   return (
     <div className="h-full flex flex-col justify-center px-6 gap-4">
       <div className="text-center mb-2">
-        <p className="text-2xl font-bold">New Game</p>
+        <p className="font-display text-4xl">New Game</p>
       </div>
       <button onClick={() => onStart('singles')}
         className="w-full py-6 rounded-2xl border-2 border-cyan-800 bg-cyan-950 active:bg-cyan-900 text-left px-6">
-        <p className="text-2xl font-bold text-cyan-200">Singles</p>
+        <p className="font-display text-3xl leading-none text-cyan-200">Singles</p>
       </button>
       <button onClick={() => onStart('doubles')}
         className="w-full py-6 rounded-2xl border-2 border-purple-800 bg-purple-950 active:bg-purple-900 text-left px-6">
-        <p className="text-2xl font-bold text-purple-200">Doubles</p>
+        <p className="font-display text-3xl leading-none text-purple-200">Doubles</p>
       </button>
       <button onClick={() => onStart('gallon')}
         className="w-full py-6 rounded-2xl border-2 border-amber-800 bg-amber-950 active:bg-amber-900 text-left px-6">
-        <p className="text-2xl font-bold text-amber-200">Gallon</p>
+        <p className="font-display text-3xl leading-none text-amber-200">Gallon</p>
       </button>
       <button onClick={() => onStart('practice')}
         className="w-full py-6 rounded-2xl border-2 border-green-800 bg-green-950 active:bg-green-900 text-left px-6">
-        <p className="text-2xl font-bold text-green-200">Practice</p>
+        <p className="font-display text-3xl leading-none text-green-200">Practice</p>
       </button>
     </div>
   );
