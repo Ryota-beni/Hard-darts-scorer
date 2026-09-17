@@ -56,6 +56,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   // セットアップ画面での選択（未選択 = null）
   const [corkChoice, setCorkChoice] = useState<'win' | 'loss' | 'none' | null>(null);
   const [orderChoice, setOrderChoice] = useState<number | null>(null);
+  // 決着コークを自分が投げなかった（勝率に入れない）
+  const [corkNoThrow, setCorkNoThrow] = useState(false);
   const [resiting, setResiting] = useState(false);
 
   // Leg内状態
@@ -94,6 +96,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setCheckoutPopup(false);
     setCheckoutScore(0);
     setCorkPopup(false);
+    setCorkNoThrow(false);
     setResiting(false);
     setOpeningCork(null);
     setCorkChoice(null);
@@ -270,7 +273,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     coScore?: number,
     finalPdi = personalDoubleIn,
     finalDiScore = doubleInRoundScore,
-    cork = false
+    cork: false | 'self' | 'other' = false
   ) => {
     // ダブルイン失敗ラウンド（doubleInAttempt）はスタッツから除外
     const scoringRounds = finalRounds.filter((r) => !r.doubleInAttempt);
@@ -309,7 +312,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       personalDoubleIn: finalPdi,
       ...(needsOrder(gameType) ? { throwOrder } : {}),
       ...(openingCork ? { openingCork } : {}),
-      ...(cork ? { limitCork: result } : {}),
+      ...(cork ? { decidedByCork: true } : {}),
+      ...(cork === 'self' ? { limitCork: result } : {}),
       awards: { hundredPlus, hundredFortyPlus, oneEighty, shortDarts, highOut, highStart },
     };
 
@@ -347,7 +351,10 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   const handleCork = (result: 'win' | 'loss') => {
     setCorkPopup(false);
     setInput('');
-    doFinalize(rounds, result, undefined, undefined, personalDoubleIn, doubleInRoundScore, true);
+    doFinalize(
+      rounds, result, undefined, undefined, personalDoubleIn, doubleInRoundScore,
+      corkNoThrow ? 'other' : 'self'
+    );
   };
 
   // Singles: リサイディング → 46ダーツ目以降も継続
@@ -450,12 +457,14 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
                 Lose
               </button>
             </div>
-            <button
-              onClick={() => setCorkChoice('none')}
-              className={`w-full mt-3 py-5 font-display text-3xl leading-none ${choiceBtn(corkChoice === 'none', 'border-zinc-400 bg-zinc-700 text-white')}`}
-            >
-              No Throw
-            </button>
+            {isTeam && (
+              <button
+                onClick={() => setCorkChoice('none')}
+                className={`w-full mt-3 py-5 font-display text-3xl leading-none ${choiceBtn(corkChoice === 'none', 'border-zinc-400 bg-zinc-700 text-white')}`}
+              >
+                No Throw
+              </button>
+            )}
           </section>
         </div>
 
@@ -611,17 +620,35 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
               {gameType === 'gallon' ? '90' : '45'} Darts
             </p>
             <p className="text-center font-display text-4xl text-white mb-1">Cork</p>
-            <p className="text-center text-xs text-zinc-500 mb-5">コークの結果を選択</p>
+            <p className="text-center text-xs text-zinc-500 mb-4">
+              {corkNoThrow ? 'コークの結果（勝率には入れない）' : 'コークの結果を選択'}
+            </p>
+            {needsOrder(gameType) && (
+              <button
+                onClick={() => setCorkNoThrow((p) => !p)}
+                className={`w-full mb-3 py-3 rounded-2xl border-2 font-display text-2xl leading-none transition-colors ${
+                  corkNoThrow
+                    ? 'border-zinc-400 bg-zinc-700 text-white'
+                    : 'border-zinc-700 bg-zinc-900 text-zinc-400 active:bg-zinc-800'
+                }`}
+              >
+                No Throw
+              </button>
+            )}
             <div className="flex gap-3 mb-3">
               <button
                 onClick={() => handleCork('win')}
-                className="flex-1 py-5 rounded-2xl bg-emerald-600 active:bg-emerald-500 font-bold text-xl"
+                className={`flex-1 py-5 rounded-2xl font-display text-3xl leading-none ${
+                  corkNoThrow ? 'bg-emerald-800 active:bg-emerald-700' : 'bg-emerald-600 active:bg-emerald-500'
+                }`}
               >
                 Win
               </button>
               <button
                 onClick={() => handleCork('loss')}
-                className="flex-1 py-5 rounded-2xl bg-red-700 active:bg-red-600 font-bold text-xl"
+                className={`flex-1 py-5 rounded-2xl font-display text-3xl leading-none ${
+                  corkNoThrow ? 'bg-red-900 active:bg-red-800' : 'bg-red-700 active:bg-red-600'
+                }`}
               >
                 Lose
               </button>

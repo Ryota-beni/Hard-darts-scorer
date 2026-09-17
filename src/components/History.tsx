@@ -143,7 +143,7 @@ function GameRow({
             <span className={`px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 ${typeBg}`}>
               {typeName}
             </span>
-            {game.limitCork && (
+            {game.decidedByCork && (
               <span className="px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 bg-zinc-700 text-zinc-200">
                 Cork
               </span>
@@ -192,10 +192,13 @@ function GameRow({
               </div>
             </div>
 
-            {(game.openingCork || game.limitCork) && (
+            {(game.openingCork || game.decidedByCork) && (
               <div className="flex justify-center gap-4 text-xs">
                 {game.openingCork && <CorkResult label="先攻決めCork" result={game.openingCork} />}
                 {game.limitCork && <CorkResult label="決着Cork" result={game.limitCork} />}
+                {game.decidedByCork && !game.limitCork && (
+                  <span className="text-zinc-500">決着Cork No Throw</span>
+                )}
               </div>
             )}
 
