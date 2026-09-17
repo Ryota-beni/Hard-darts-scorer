@@ -117,14 +117,18 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
   const startNextLeg = () => {
     resetLegState();
-    changePhase(gameType === 'practice' ? 'playing' : 'setup');
+    // コークはマッチ頭だけ。Leg 2 以降は投げ順のみ（Singles は設定不要）
+    const needsSetup = gameType !== 'practice' && needsOrder(gameType);
+    changePhase(needsSetup ? 'setup' : 'playing');
   };
 
-  const setupReady = corkChoice != null && (!needsOrder(gameType) || orderChoice != null);
+  const askCork = legNumber === 1; // 先攻決めコークはマッチ頭のみ
+  const setupReady =
+    (!askCork || corkChoice != null) && (!needsOrder(gameType) || orderChoice != null);
 
   const handleGameOn = () => {
     if (!setupReady) return;
-    setOpeningCork(corkChoice === 'none' ? null : corkChoice);
+    setOpeningCork(askCork && corkChoice !== 'none' ? corkChoice : null);
     if (orderChoice != null) setThrowOrder(orderChoice);
     changePhase('playing');
   };
@@ -358,6 +362,13 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   };
 
   // Singles: リサイディング → 46ダーツ目以降も継続
+  // 規定ラウンド後にコークではなく、相手（またはチーム）の上がりで決着
+  const handleFinishWithoutCork = (result: 'win' | 'loss') => {
+    setCorkPopup(false);
+    setInput('');
+    doFinalize(rounds, result, undefined, undefined, personalDoubleIn, doubleInRoundScore, false);
+  };
+
   const handleResiting = () => {
     setResiting(true);
     setCorkPopup(false);
@@ -440,7 +451,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
             </section>
           )}
 
-          {/* Cork */}
+          {/* Cork（マッチ頭のみ） */}
+          {askCork && (
           <section>
             <p className="font-display text-3xl text-white mb-3">Cork</p>
             <div className="grid grid-cols-2 gap-3">
@@ -466,6 +478,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
               </button>
             )}
           </section>
+          )}
         </div>
 
         <div className="flex-shrink-0 px-6 pt-2 pb-4">
@@ -621,7 +634,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
             </p>
             <p className="text-center font-display text-4xl text-white mb-1">Cork</p>
             <p className="text-center text-xs text-zinc-500 mb-4">
-              {corkNoThrow ? 'コークの結果（勝率には入れない）' : 'コークの結果を選択'}
+              {corkNoThrow ? 'コークの結果（勝率には入れない）' : '決着を選択'}
             </p>
             {needsOrder(gameType) && (
               <button
@@ -653,12 +666,30 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
                 Lose
               </button>
             </div>
+            {/* コーク以外の決着（相手 / チームが上がった） */}
+            <div className="flex gap-3 mb-3">
+              <button
+                onClick={() => handleFinishWithoutCork('loss')}
+                className="flex-1 py-3.5 rounded-2xl bg-red-950 active:bg-red-900 border border-red-800 text-red-300 font-semibold text-sm"
+              >
+                相手が上がった
+              </button>
+              {needsOrder(gameType) && (
+                <button
+                  onClick={() => handleFinishWithoutCork('win')}
+                  className="flex-1 py-3.5 rounded-2xl bg-emerald-950 active:bg-emerald-900 border border-emerald-800 text-emerald-300 font-semibold text-sm"
+                >
+                  チームが上がった
+                </button>
+              )}
+            </div>
+
             {gameType === 'singles' && (
               <button
                 onClick={handleResiting}
-                className="w-full py-3.5 mb-1 rounded-2xl bg-zinc-800 active:bg-zinc-700 border border-zinc-600 font-semibold text-base text-zinc-200"
+                className="w-full py-4 mb-1 rounded-2xl bg-zinc-800 active:bg-zinc-700 border border-zinc-600 font-display text-2xl leading-none text-zinc-200"
               >
-                リサイディング（続行）
+                Resiting
               </button>
             )}
             <button
