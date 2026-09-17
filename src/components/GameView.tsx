@@ -18,6 +18,20 @@ const SINGLES_MAX_ROUNDS = 15;
 // 投げ順ごとの最大スロー数
 // Doubles: 2人で45ダーツ（15スロー）→ First 8 / Second 7
 // Gallon : 4人で90ダーツ（30スロー）→ First,Second 8 / Third,Fourth 7
+// レグ全体のラウンド数（盤面としてのラウンド）と、1巡あたりの人数
+const TOTAL_ROUNDS: Record<GameType, number> = {
+  singles: 15, doubles: 15, gallon: 30, practice: Infinity,
+};
+const PLAYERS_PER_LEG: Record<GameType, number> = {
+  singles: 1, doubles: 2, gallon: 4, practice: 1,
+};
+
+// 自分の n 投目（1始まり）が、レグ全体で何ラウンド目にあたるか
+// 例: Gallon の Third → 3, 7, 11, ...
+function toGlobalRound(type: GameType, order: number, personalRound: number): number {
+  return order + PLAYERS_PER_LEG[type] * (personalRound - 1);
+}
+
 function getMaxRounds(type: GameType, order: number, resiting: boolean): number {
   if (type === 'singles') return resiting ? Infinity : SINGLES_MAX_ROUNDS;
   if (type === 'doubles') return order === 1 ? 8 : 7;
@@ -113,6 +127,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   };
 
   const maxRounds = getMaxRounds(gameType, throwOrder, resiting);
+  const totalRounds = resiting ? Infinity : TOTAL_ROUNDS[gameType];
   const reachedLimit = rounds.length >= maxRounds;
 
   // ラウンド追加後、上限に達したらコーク
@@ -646,8 +661,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
             <span className="text-zinc-600 text-xs">{ORDER_LABELS[throwOrder - 1]}</span>
           )}
           <span className="text-zinc-400 text-sm tabular-nums">
-            R{Math.min(rounds.length + 1, maxRounds)}
-            {maxRounds !== Infinity && <span className="text-zinc-600">/{maxRounds}</span>}
+            R{toGlobalRound(gameType, throwOrder, Math.min(rounds.length + 1, maxRounds))}
+            {totalRounds !== Infinity && <span className="text-zinc-600">/{totalRounds}</span>}
           </span>
           {resiting && <span className="text-xs text-amber-400">Resiting</span>}
         </div>
