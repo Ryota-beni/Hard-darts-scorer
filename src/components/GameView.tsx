@@ -117,9 +117,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
   const startNextLeg = () => {
     resetLegState();
-    // コークはマッチ頭だけ。Leg 2 以降は投げ順のみ（Singles は設定不要）
-    const needsSetup = gameType !== 'practice' && needsOrder(gameType);
-    changePhase(needsSetup ? 'setup' : 'playing');
+    // コークはマッチ頭だけ。投げ順もマッチ中は変わらないので Leg 2 以降は設定不要
+    changePhase('playing');
   };
 
   const askCork = legNumber === 1; // 先攻決めコークはマッチ頭のみ
