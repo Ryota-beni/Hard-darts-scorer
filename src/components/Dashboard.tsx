@@ -6,14 +6,17 @@ interface Props {
   games: Game[];
 }
 
-// from から target へ 0.9秒かけて動かす（途中で目標が変わっても現在値から続く）
+// 画面を開いたときだけ from → target へ 0.9秒かけて動かす
+// （League / All の切替では動かさず、すぐ新しい値にする）
 function useAnimatedNumber(target: number, from: number): number {
   const [value, setValue] = useState(from);
   const currentRef = useRef(from);
+  const animatedRef = useRef(false); // 初回アニメーションが終わったか
 
   useEffect(() => {
     const start = currentRef.current;
-    if (Math.abs(start - target) < 0.0001) {
+    if (animatedRef.current || Math.abs(start - target) < 0.0001) {
+      animatedRef.current = true;
       currentRef.current = target;
       setValue(target);
       return;
@@ -27,6 +30,7 @@ function useAnimatedNumber(target: number, from: number): number {
       currentRef.current = v;
       setValue(v);
       if (p < 1) id = requestAnimationFrame(step);
+      else animatedRef.current = true;
     });
     return () => cancelAnimationFrame(id);
   }, [target]);
