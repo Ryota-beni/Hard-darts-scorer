@@ -11,7 +11,7 @@ type Tab = 'stats' | 'game' | 'history' | 'awards';
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('game');
   const [games, setGames] = useState<Game[]>(() => loadGames());
-  const [gamePhase, setGamePhase] = useState<GamePhase>('select');
+  const [gamePhase, setGamePhase] = useState<GamePhase>('home');
   const [pendingTab, setPendingTab] = useState<Tab | null>(null);
 
   const handleLegSave = (game: Game) => {
@@ -40,8 +40,8 @@ export default function App() {
 
   const handleTabPress = (tab: Tab) => {
     if (tab === activeTab) return;
-    // ゲーム進行中（playing or between）に他タブへ移動しようとした場合
-    if (activeTab === 'game' && gamePhase !== 'select') {
+    // ゲーム進行中（入力中・レグ間）に他タブへ移動しようとした場合
+    if (activeTab === 'game' && (gamePhase === 'playing' || gamePhase === 'between')) {
       setPendingTab(tab);
       return;
     }

@@ -2,7 +2,19 @@ import { useState } from 'react';
 import { Game, GameType, Round } from '../types';
 import { calcGamePPR } from '../stats';
 
-export type GamePhase = 'select' | 'setup' | 'playing' | 'between';
+export type GamePhase = 'home' | 'leagueSetup' | 'setup' | 'playing' | 'between' | 'result';
+
+// League は ガロン → ダブルス → シングルス の順に進む
+const LEAGUE_ORDER: GameType[] = ['gallon', 'doubles', 'singles'];
+
+interface MatchResult {
+  type: GameType;
+  result: 'win' | 'loss';
+  playerLegs: number;
+  oppLegs: number;
+  points: number;
+  darts: number;
+}
 
 const ORDER_LABELS = ['First', 'Second', 'Third', 'Fourth'];
 
@@ -40,7 +52,7 @@ function getMaxRounds(type: GameType, order: number, resiting: boolean): number 
 }
 
 export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: Props) {
-  const [phase, setPhase] = useState<GamePhase>('select');
+  const [phase, setPhase] = useState<GamePhase>('home');
 
   const changePhase = (next: GamePhase) => {
     setPhase(next);
@@ -76,7 +88,15 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   const [checkoutPopup, setCheckoutPopup] = useState(false);
   const [checkoutScore, setCheckoutScore] = useState(0);
 
+  // League状態（空 = 単発のPractice）
+  const [leagueQueue, setLeagueQueue] = useState<GameType[]>([]);
+  const [leagueIndex, setLeagueIndex] = useState(0);
+  const [leagueResults, setLeagueResults] = useState<MatchResult[]>([]);
+  const [leagueSel, setLeagueSel] = useState<GameType[]>([]);
+
   // Match状態
+  const [matchPoints, setMatchPoints] = useState(0);
+  const [matchDarts, setMatchDarts] = useState(0);
   const [legNumber, setLegNumber] = useState(1);
   const [playerLegs, setPlayerLegs] = useState(0);
   const [oppLegs, setOppLegs] = useState(0);
@@ -105,14 +125,37 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
   const needsOrder = (type: GameType) => type === 'doubles' || type === 'gallon';
 
-  const startGame = (type: GameType) => {
+  // マッチ（Practiceはセッション）を開始。コークは必ず頭で聞く
+  const startMatch = (type: GameType) => {
     resetLegState();
     setGameType(type);
     setLegNumber(1);
     setPlayerLegs(0);
     setOppLegs(0);
     setThrowOrder(1);
-    changePhase(type === 'practice' ? 'playing' : 'setup');
+    setMatchPoints(0);
+    setMatchDarts(0);
+    changePhase('setup');
+  };
+
+  const startLeague = (types: GameType[]) => {
+    const queue = LEAGUE_ORDER.filter((t) => types.includes(t));
+    if (queue.length === 0) return;
+    setLeagueQueue(queue);
+    setLeagueIndex(0);
+    setLeagueResults([]);
+    startMatch(queue[0]);
+  };
+
+  const goHome = () => {
+    setLeagueQueue([]);
+    setLeagueIndex(0);
+    setLeagueResults([]);
+    resetLegState();
+    setLegNumber(1);
+    setPlayerLegs(0);
+    setOppLegs(0);
+    changePhase('home');
   };
 
   const startNextLeg = () => {
@@ -322,9 +365,13 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
     onLegSave(game);
 
+    const points = matchPoints + game.totalPoints;
+    const darts = matchDarts + totalDarts;
+    setMatchPoints(points);
+    setMatchDarts(darts);
+
     if (gameType === 'gallon') {
-      onMatchComplete();
-      changePhase('select');
+      finishMatch(result, result === 'win' ? 1 : 0, result === 'win' ? 0 : 1, points, darts);
       return;
     }
 
@@ -341,10 +388,31 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     }
 
     if (newPlayer === 2 || newOpp === 2) {
-      onMatchComplete();
-      changePhase('select');
+      finishMatch(newPlayer === 2 ? 'win' : 'loss', newPlayer, newOpp, points, darts);
     } else {
       changePhase('between');
+    }
+  };
+
+  // マッチ終了 → League なら次の種目へ、最後ならリザルト
+  const finishMatch = (
+    result: 'win' | 'loss', pLegs: number, oLegs: number, points: number, darts: number
+  ) => {
+    onMatchComplete();
+    if (leagueQueue.length === 0) {
+      goHome();
+      return;
+    }
+    setLeagueResults((prev) => [
+      ...prev,
+      { type: gameType, result, playerLegs: pLegs, oppLegs: oLegs, points, darts },
+    ]);
+    const next = leagueIndex + 1;
+    if (next < leagueQueue.length) {
+      setLeagueIndex(next);
+      startMatch(leagueQueue[next]);
+    } else {
+      changePhase('result');
     }
   };
 
@@ -381,8 +449,157 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
   const currentPPR = calcGamePPR(rounds);
 
-  // ─── Select ──────────────────────────────────────────
-  if (phase === 'select') return <GameSelect onStart={startGame} />;
+  // ─── Home ────────────────────────────────────────────
+  if (phase === 'home') {
+    return (
+      <div className="h-full flex flex-col justify-center px-6 gap-4">
+        <div className="text-center mb-2">
+          <p className="font-display text-4xl">New Game</p>
+        </div>
+        <button
+          onClick={() => { setLeagueSel([]); changePhase('leagueSetup'); }}
+          className="w-full py-8 rounded-2xl border-2 border-cyan-800 bg-cyan-950 active:bg-cyan-900 text-center"
+        >
+          <p className="font-display text-4xl leading-none text-cyan-200">League</p>
+        </button>
+        <button
+          onClick={() => startMatch('practice')}
+          className="w-full py-8 rounded-2xl border-2 border-green-800 bg-green-950 active:bg-green-900 text-center"
+        >
+          <p className="font-display text-4xl leading-none text-green-200">Practice</p>
+        </button>
+      </div>
+    );
+  }
+
+  // ─── League 設定（今日出る種目） ─────────────────────
+  if (phase === 'leagueSetup') {
+    const toggle = (t: GameType) =>
+      setLeagueSel((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+    const allChecked = LEAGUE_ORDER.every((t) => leagueSel.includes(t));
+    const label: Record<string, string> = { gallon: 'Gallon', doubles: 'Doubles', singles: 'Singles' };
+    const color: Record<string, string> = {
+      gallon: 'border-amber-400 bg-amber-700 text-white',
+      doubles: 'border-purple-400 bg-purple-800 text-white',
+      singles: 'border-cyan-400 bg-cyan-700 text-white',
+    };
+
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-shrink-0 bg-zinc-900 px-4 py-2.5 flex items-center justify-between border-b border-zinc-800">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goHome}
+              className="text-zinc-500 active:text-white text-lg leading-none pr-1"
+            >
+              ←
+            </button>
+            <span className="text-zinc-300 text-sm font-bold">League</span>
+          </div>
+          <button
+            onClick={() => setLeagueSel(allChecked ? [] : [...LEAGUE_ORDER])}
+            className="text-xs text-zinc-400 active:text-white px-2 py-1 rounded-lg border border-zinc-700"
+          >
+            {allChecked ? 'すべて外す' : 'すべて選択'}
+          </button>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center px-6 gap-3">
+          <p className="text-center text-sm text-zinc-500 mb-2">今日出る種目を選択</p>
+          {LEAGUE_ORDER.map((t) => {
+            const on = leagueSel.includes(t);
+            return (
+              <button
+                key={t}
+                onClick={() => toggle(t)}
+                className={`w-full py-6 rounded-2xl border-2 font-display text-3xl leading-none transition-colors ${
+                  on ? color[t] : 'border-zinc-700 bg-zinc-900 text-zinc-500 active:bg-zinc-800'
+                }`}
+              >
+                {label[t]}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex-shrink-0 px-6 pt-2 pb-4">
+          <button
+            onClick={() => startLeague(leagueSel)}
+            disabled={leagueSel.length === 0}
+            className={`w-full py-4 rounded-2xl font-display text-3xl transition-colors ${
+              leagueSel.length > 0
+                ? 'bg-emerald-600 active:bg-emerald-700 text-white'
+                : 'bg-zinc-800 text-zinc-600'
+            }`}
+          >
+            Start
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── League リザルト ─────────────────────────────────
+  if (phase === 'result') {
+    const wins = leagueResults.filter((r) => r.result === 'win').length;
+    const name: Record<string, string> = {
+      gallon: 'Gallon', doubles: 'Doubles', singles: 'Singles', practice: 'Practice',
+    };
+
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-shrink-0 bg-zinc-900 px-4 py-2.5 border-b border-zinc-800">
+          <span className="text-zinc-300 text-sm font-bold">League Result</span>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center px-6 gap-3">
+          <div className="text-center mb-2">
+            <p className="font-display text-6xl text-zinc-200 leading-none">
+              {wins}<span className="text-zinc-600">-</span>{leagueResults.length - wins}
+            </p>
+            <p className="text-xs text-zinc-500 mt-2">{leagueResults.length}試合</p>
+          </div>
+
+          {leagueResults.map((r, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between bg-zinc-900 rounded-2xl px-4 py-3 border border-zinc-800"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-display text-2xl text-zinc-300">{name[r.type]}</span>
+                {r.type !== 'gallon' && (
+                  <span className="text-xs text-zinc-500 tabular-nums">
+                    {r.playerLegs}-{r.oppLegs}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-zinc-500 tabular-nums">
+                  PPR {r.darts > 0 ? ((r.points * 3) / r.darts).toFixed(1) : '—'}
+                </span>
+                <span
+                  className={`font-display text-2xl ${
+                    r.result === 'win' ? 'text-emerald-400' : 'text-red-400'
+                  }`}
+                >
+                  {r.result === 'win' ? 'WIN' : 'LOSE'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-shrink-0 px-6 pt-2 pb-4">
+          <button
+            onClick={goHome}
+            className="w-full py-4 rounded-2xl bg-emerald-600 active:bg-emerald-700 font-display text-3xl text-white"
+          >
+            Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const typeName =
     gameType === 'singles' ? 'Singles'
@@ -429,7 +646,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
     return (
       <div className="flex flex-col h-full">
-        {setupHeader(() => changePhase('select'))}
+        {setupHeader(goHome)}
 
         <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4 space-y-8">
           {/* Throw order */}
@@ -468,7 +685,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
                 Lose
               </button>
             </div>
-            {isTeam && (
+            {(isTeam || gameType === 'practice') && (
               <button
                 onClick={() => setCorkChoice('none')}
                 className={`w-full mt-3 py-5 font-display text-3xl leading-none ${choiceBtn(corkChoice === 'none', 'border-zinc-400 bg-zinc-700 text-white')}`}
@@ -552,27 +769,14 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
             </button>
             {isPractice ? (
               <button
-                onClick={() => {
-                  onMatchComplete();
-                  resetLegState();
-                  setLegNumber(1);
-                  setPlayerLegs(0);
-                  setOppLegs(0);
-                  changePhase('select');
-                }}
+                onClick={() => { onMatchComplete(); goHome(); }}
                 className="w-full py-3 rounded-2xl bg-zinc-800 active:bg-zinc-700 font-semibold text-sm text-zinc-300"
               >
                 End Session
               </button>
             ) : (
               <button
-                onClick={() => {
-                  resetLegState();
-                  setLegNumber(1);
-                  setPlayerLegs(0);
-                  setOppLegs(0);
-                  changePhase('select');
-                }}
+                onClick={goHome}
                 className="w-full py-2 text-zinc-600 text-sm active:text-zinc-400"
               >
                 中断する
@@ -628,9 +832,11 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       {corkPopup && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
           <div className="w-full max-w-sm bg-zinc-900 rounded-t-2xl border-t border-zinc-700 px-5 pt-5 pb-8">
-            <p className="text-center text-xs text-zinc-500 uppercase tracking-widest mb-1">
-              {gameType === 'gallon' ? '90' : '45'} Darts
-            </p>
+            {gameType !== 'practice' && (
+              <p className="text-center text-xs text-zinc-500 uppercase tracking-widest mb-1">
+                {gameType === 'gallon' ? '90' : '45'} Darts
+              </p>
+            )}
             <p className="text-center font-display text-4xl text-white mb-1">Cork</p>
             <p className="text-center text-xs text-zinc-500 mb-4">
               {corkNoThrow ? 'コークの結果（勝率には入れない）' : '決着を選択'}
@@ -692,10 +898,10 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
               </button>
             )}
             <button
-              onClick={handleCorkUndo}
+              onClick={() => (gameType === 'practice' ? setCorkPopup(false) : handleCorkUndo())}
               className="w-full py-3 text-zinc-500 text-sm active:text-zinc-300"
             >
-              直前のラウンドを取消
+              {gameType === 'practice' ? 'キャンセル' : '直前のラウンドを取消'}
             </button>
           </div>
         </div>
@@ -705,7 +911,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       <div className="flex-shrink-0 bg-zinc-900 px-4 py-2.5 flex items-center justify-between border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => changePhase('select')}
+            onClick={goHome}
             className="text-zinc-500 active:text-white text-lg leading-none pr-1"
           >
             ←
@@ -858,6 +1064,15 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
           Check Out
         </button>
 
+        {isPractice && (
+          <button
+            onClick={() => setCorkPopup(true)}
+            className="py-2.5 rounded-xl bg-zinc-800 active:bg-zinc-700 border border-zinc-600 font-semibold text-sm text-zinc-200"
+          >
+            Cork
+          </button>
+        )}
+
         {(gameType === 'doubles' || gameType === 'gallon') && (
           <button
             onClick={handleWin}
@@ -874,32 +1089,6 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
           Lose
         </button>
       </div>
-    </div>
-  );
-}
-
-function GameSelect({ onStart }: { onStart: (type: GameType) => void }) {
-  return (
-    <div className="h-full flex flex-col justify-center px-6 gap-4">
-      <div className="text-center mb-2">
-        <p className="font-display text-4xl">New Game</p>
-      </div>
-      <button onClick={() => onStart('singles')}
-        className="w-full py-6 rounded-2xl border-2 border-cyan-800 bg-cyan-950 active:bg-cyan-900 text-left px-6">
-        <p className="font-display text-3xl leading-none text-cyan-200">Singles</p>
-      </button>
-      <button onClick={() => onStart('doubles')}
-        className="w-full py-6 rounded-2xl border-2 border-purple-800 bg-purple-950 active:bg-purple-900 text-left px-6">
-        <p className="font-display text-3xl leading-none text-purple-200">Doubles</p>
-      </button>
-      <button onClick={() => onStart('gallon')}
-        className="w-full py-6 rounded-2xl border-2 border-amber-800 bg-amber-950 active:bg-amber-900 text-left px-6">
-        <p className="font-display text-3xl leading-none text-amber-200">Gallon</p>
-      </button>
-      <button onClick={() => onStart('practice')}
-        className="w-full py-6 rounded-2xl border-2 border-green-800 bg-green-950 active:bg-green-900 text-left px-6">
-        <p className="font-display text-3xl leading-none text-green-200">Practice</p>
-      </button>
     </div>
   );
 }
