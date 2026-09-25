@@ -151,10 +151,10 @@ export default function History({ games, onAddGame, onDeleteGame }: Props) {
                 </span>
                 {rt != null ? (
                   <span
-                    className="font-display text-[13px] leading-none tabular-nums"
+                    className="font-display text-[11px] leading-none tabular-nums"
                     style={{ color: `rgb(${FLIGHT_RGB[ratingFlight(rt)] ?? '148,163,184'})` }}
                   >
-                    {rt.toFixed(1)}
+                    {rt.toFixed(2)}
                   </span>
                 ) : dayGames ? (
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
