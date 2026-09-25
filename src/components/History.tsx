@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Game } from '../types';
-import { getRating, getFlightBadgeClass } from '../stats';
+import {
+  getRating, getFlightBadgeClass, getRatingDecimal, calcDashboardStats, FLIGHT_RGB, RATING_TABLE,
+} from '../stats';
 import ManualEntry from './ManualEntry';
 
 interface Props {
@@ -9,33 +11,275 @@ interface Props {
   onDeleteGame: (id: string) => void;
 }
 
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function History({ games, onAddGame, onDeleteGame }: Props) {
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [month, setMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  // 日付ごとのゲーム
+  const byDay = useMemo(() => {
+    const map = new Map<string, Game[]>();
+    for (const g of games) {
+      const k = dayKey(new Date(g.date));
+      const arr = map.get(k);
+      if (arr) arr.push(g);
+      else map.set(k, [g]);
+    }
+    return map;
+  }, [games]);
+
+  // その日が終わった時点のレーティング（リーグ戦のみ・直近50ゲーム平均）
+  const ratingByDay = useMemo(() => {
+    const league = games
+      .filter((g) => g.type !== 'practice')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const map = new Map<string, number>();
+    const acc: Game[] = [];
+    for (const g of league) {
+      acc.push(g);
+      const last50 = acc.slice(-50);
+      const ppr = last50.reduce((s, x) => s + x.ppr, 0) / last50.length;
+      map.set(dayKey(new Date(g.date)), getRatingDecimal(ppr)); // 同じ日は最後のゲームで上書き
+    }
+    return map;
+  }, [games]);
+
+  // 日別詳細
+  if (selectedDay) {
+    const dayGames = byDay.get(selectedDay) ?? [];
+    return (
+      <>
+        <DayDetail
+          dateKey={selectedDay}
+          games={dayGames}
+          onBack={() => setSelectedDay(null)}
+          onDeleteGame={onDeleteGame}
+        />
+        {showManualEntry && (
+          <ManualEntry onSave={onAddGame} onClose={() => setShowManualEntry(false)} />
+        )}
+      </>
+    );
+  }
+
+  const year = month.getFullYear();
+  const mon = month.getMonth();
+  const startPad = new Date(year, mon, 1).getDay();
+  const daysInMonth = new Date(year, mon + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array<null>(startPad).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  const todayKey = dayKey(new Date());
+  const monthGames = games.filter((g) => {
+    const d = new Date(g.date);
+    return d.getFullYear() === year && d.getMonth() === mon;
+  });
 
   return (
     <>
       <div className="p-4 pb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-zinc-200">
-            履歴 <span className="text-sm font-normal text-zinc-500">{games.length}ゲーム</span>
-          </h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMonth(new Date(year, mon - 1, 1))}
+              className="w-8 h-8 rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-300 text-sm"
+            >
+              ‹
+            </button>
+            <h2 className="font-display text-2xl text-zinc-200 tabular-nums">
+              {year}.{String(mon + 1).padStart(2, '0')}
+            </h2>
+            <button
+              onClick={() => setMonth(new Date(year, mon + 1, 1))}
+              className="w-8 h-8 rounded-lg bg-zinc-800 active:bg-zinc-700 text-zinc-300 text-sm"
+            >
+              ›
+            </button>
+          </div>
           <button
             onClick={() => setShowManualEntry(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-zinc-700 text-xs font-semibold text-zinc-300 border border-zinc-700"
+            className="px-3 py-1.5 rounded-lg bg-zinc-800 active:bg-zinc-700 text-xs font-semibold text-zinc-300 border border-zinc-700"
           >
             ＋ 手動入力
           </button>
         </div>
 
-        {games.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 text-zinc-600 px-8 py-16">
+        <p className="text-xs text-zinc-600 mb-2">{monthGames.length}ゲーム</p>
+
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {WEEKDAYS.map((w, i) => (
+            <p
+              key={w}
+              className={`text-center text-[10px] ${
+                i === 0 ? 'text-red-400/70' : i === 6 ? 'text-blue-400/70' : 'text-zinc-600'
+              }`}
+            >
+              {w}
+            </p>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((d, i) => {
+            if (d == null) return <div key={`p${i}`} />;
+            const k = dayKey(new Date(year, mon, d));
+            const dayGames = byDay.get(k);
+            const rt = ratingByDay.get(k);
+            return (
+              <button
+                key={k}
+                disabled={!dayGames}
+                onClick={() => setSelectedDay(k)}
+                className={`aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 border ${
+                  dayGames
+                    ? 'bg-zinc-900 border-zinc-700 active:bg-zinc-800'
+                    : 'bg-transparent border-transparent'
+                } ${k === todayKey ? 'ring-1 ring-cyan-600' : ''}`}
+              >
+                <span className={`text-[11px] tabular-nums ${dayGames ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  {d}
+                </span>
+                {rt != null ? (
+                  <span
+                    className="font-display text-[13px] leading-none tabular-nums"
+                    style={{ color: `rgb(${FLIGHT_RGB[ratingFlight(rt)] ?? '148,163,184'})` }}
+                  >
+                    {rt.toFixed(1)}
+                  </span>
+                ) : dayGames ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {games.length === 0 && (
+          <div className="flex flex-col items-center justify-center gap-3 text-zinc-600 px-8 py-12">
             <span className="text-5xl">📋</span>
             <p className="text-center text-zinc-400 font-medium">まだ履歴がありません</p>
           </div>
-        ) : (
+        )}
+      </div>
+
+      {showManualEntry && (
+        <ManualEntry onSave={onAddGame} onClose={() => setShowManualEntry(false)} />
+      )}
+    </>
+  );
+}
+
+// RT小数からフライト名を引く
+function ratingFlight(rtDecimal: number): string {
+  const rt = Math.floor(rtDecimal);
+  return RATING_TABLE.find((e) => e.rt === rt)?.flight ?? 'C';
+}
+
+function DayDetail({
+  dateKey, games, onBack, onDeleteGame,
+}: {
+  dateKey: string;
+  games: Game[];
+  onBack: () => void;
+  onDeleteGame: (id: string) => void;
+}) {
+  const [tab, setTab] = useState<'league' | 'all'>('league');
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const shown = tab === 'all' ? games : games.filter((g) => g.type !== 'practice');
+  const stats = calcDashboardStats(games, tab === 'all');
+  const [y, m, d] = dateKey.split('-');
+  const weekday = WEEKDAYS[new Date(Number(y), Number(m) - 1, Number(d)).getDay()];
+
+  return (
+    <div className="p-4 pb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <button onClick={onBack} className="text-zinc-500 active:text-white text-lg leading-none pr-1">
+          ←
+        </button>
+        <h2 className="font-display text-2xl text-zinc-200 tabular-nums">
+          {Number(m)}/{Number(d)}
+        </h2>
+        <span className="text-xs text-zinc-500">({weekday})</span>
+        <span className="text-xs text-zinc-600 ml-auto">{shown.length}ゲーム</span>
+      </div>
+
+      <div className="flex gap-1 p-1 bg-zinc-800 rounded-xl mb-3">
+        {(['league', 'all'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+              tab === t ? 'bg-zinc-600 text-white' : 'text-zinc-500 active:text-zinc-300'
+            }`}
+          >
+            {t === 'league' ? 'League' : 'All'}
+          </button>
+        ))}
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="text-center text-sm text-zinc-500 py-10">
+          {tab === 'league' ? 'この日はリーグ戦がありません' : 'この日の記録がありません'}
+        </p>
+      ) : (
+        <>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 text-center mb-3">
+            <p className="text-xs text-zinc-600 uppercase tracking-widest mb-1">Rating</p>
+            <p className="font-display text-5xl tabular-nums text-zinc-200 leading-none">
+              {getRatingDecimal(stats.ppr).toFixed(2)}
+            </p>
+            <p className="font-display text-2xl mt-1" style={{ color: `rgb(${FLIGHT_RGB[stats.flight] ?? '148,163,184'})` }}>
+              {stats.flight}
+            </p>
+            <div className="mt-3">
+              <p className="text-xs text-zinc-500 uppercase tracking-widest mb-0.5">PPR</p>
+              <p className="font-display text-3xl tabular-nums text-zinc-200 leading-none">
+                {stats.ppr.toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <DayStat label="Win" value={`${stats.wins}`} accent="text-emerald-400" />
+            <DayStat label="Lose" value={`${stats.losses}`} accent="text-red-400" />
+            <DayStat
+              label="Check out %"
+              value={stats.checkoutRate != null ? `${stats.checkoutRate.toFixed(1)}%` : '—'}
+              sub={stats.checkoutOpportunities > 0 ? `${stats.checkoutSuccesses} / ${stats.checkoutOpportunities}` : undefined}
+              accent="text-cyan-400"
+            />
+            <DayStat
+              label="Open %"
+              value={stats.openRate != null ? `${stats.openRate.toFixed(1)}%` : '—'}
+              sub={stats.openTotal > 0 ? `${stats.openSuccesses} / ${stats.openTotal}` : undefined}
+              accent="text-purple-400"
+            />
+            <DayStat
+              label="Cork %"
+              value={stats.corkRate != null ? `${stats.corkRate.toFixed(1)}%` : '—'}
+              sub={stats.corkTotal > 0 ? `${stats.corkWins} / ${stats.corkTotal}` : undefined}
+              accent="text-amber-400"
+            />
+            <DayStat
+              label="First 9"
+              value={stats.first9 != null ? stats.first9.toFixed(2) : '—'}
+              accent="text-zinc-200"
+            />
+          </div>
+
           <div className="space-y-2">
-            {[...games].reverse().map((g) => (
+            {[...shown].reverse().map((g) => (
               <GameRow
                 key={g.id}
                 game={g}
@@ -45,19 +289,28 @@ export default function History({ games, onAddGame, onDeleteGame }: Props) {
               />
             ))}
           </div>
-        )}
-      </div>
-
-      {showManualEntry && (
-        <ManualEntry
-          onSave={onAddGame}
-          onClose={() => setShowManualEntry(false)}
-        />
+        </>
       )}
-    </>
+    </div>
   );
 }
 
+function DayStat({
+  label, value, sub, accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent: string;
+}) {
+  return (
+    <div className="bg-zinc-900 rounded-2xl p-3 border border-zinc-800">
+      <p className="text-xs text-zinc-500 mb-1">{label}</p>
+      <p className={`text-xl font-bold tabular-nums ${accent}`}>{value}</p>
+      {sub && <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">{sub}</p>}
+    </div>
+  );
+}
 
 function GameRow({
   game, isExpanded, onToggle, onDelete,

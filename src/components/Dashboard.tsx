@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Game } from '../types';
 import { calcDashboardStats, getRating, getRatingDecimal, FLIGHT_RGB, getFlightBadgeClass, RATING_TABLE } from '../stats';
 
@@ -6,7 +7,8 @@ interface Props {
 }
 
 export default function Dashboard({ games }: Props) {
-  const stats = calcDashboardStats(games);
+  const [tab, setTab] = useState<'league' | 'all'>('league');
+  const stats = calcDashboardStats(games, tab === 'all');
 
   if (games.length === 0) {
     return (
@@ -31,6 +33,20 @@ export default function Dashboard({ games }: Props) {
 
   return (
     <div className="p-4 space-y-4 pb-6">
+      {/* League / All 切替 */}
+      <div className="flex gap-1 p-1 bg-zinc-800 rounded-xl">
+        {(['league', 'all'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+              tab === t ? 'bg-zinc-600 text-white' : 'text-zinc-500 active:text-zinc-300'
+            }`}
+          >
+            {t === 'league' ? 'League' : 'All'}
+          </button>
+        ))}
+      </div>
       {/* Rating card — カード全体がシークバー */}
       <div className="relative rounded-2xl border border-zinc-800 text-center overflow-hidden" style={{ background: '#18181b' }}>
         {/* 下から塗り上がる進捗レイヤー（現フライト色→次フライト色グラデ） */}
@@ -123,7 +139,7 @@ export default function Dashboard({ games }: Props) {
       <div>
         <p className="text-xs text-zinc-500 mb-2">直近ゲーム</p>
         <div className="space-y-1.5">
-          {games
+          {(tab === 'all' ? games : games.filter((g) => g.type !== 'practice'))
             .slice(-8)
             .reverse()
             .map((g) => {
@@ -144,6 +160,8 @@ export default function Dashboard({ games }: Props) {
                         ? 'Singles'
                         : g.type === 'doubles'
                         ? 'Doubles'
+                        : g.type === 'practice'
+                        ? 'Practice'
                         : 'Gallon'}
                     </span>
                     <span className="text-xs text-zinc-600 truncate">

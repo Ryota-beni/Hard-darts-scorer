@@ -116,9 +116,12 @@ export interface DashboardStats {
   gamesForRating: number;
 }
 
-export function calcDashboardStats(allGames: Game[]): DashboardStats {
-  // Practice ゲームはスタッツ・レーティングに影響しない
-  const leagueGames = allGames.filter((g) => g.type !== 'practice');
+/**
+ * includePractice = false: リーグ戦のみ（従来どおり）
+ * includePractice = true : Practice も含めた全ゲーム
+ */
+export function calcDashboardStats(allGames: Game[], includePractice = false): DashboardStats {
+  const leagueGames = includePractice ? allGames : allGames.filter((g) => g.type !== 'practice');
   const last50 = leagueGames.slice(-50);
   const wins = leagueGames.filter((g) => g.result === 'win').length;
   const losses = leagueGames.filter((g) => g.result === 'loss').length;
@@ -132,7 +135,7 @@ export function calcDashboardStats(allGames: Game[]): DashboardStats {
 
   // First 9: average of first9 values in last 50 Singles games
   const singlesLast50 = leagueGames
-    .filter((g) => g.type === 'singles')
+    .filter((g) => g.type === 'singles' || (includePractice && g.type === 'practice'))
     .slice(-50)
     .filter((g) => g.first9 != null);
   const first9 =
