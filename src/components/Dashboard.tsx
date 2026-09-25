@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Game } from '../types';
 import { calcDashboardStats, getRating, getRatingDecimal, FLIGHT_RGB, getFlightBadgeClass, RATING_TABLE } from '../stats';
 
@@ -6,9 +6,60 @@ interface Props {
   games: Game[];
 }
 
+// from から target へ 0.9秒かけて動かす（途中で目標が変わっても現在値から続く）
+function useAnimatedNumber(target: number, from: number): number {
+  const [value, setValue] = useState(from);
+  const currentRef = useRef(from);
+
+  useEffect(() => {
+    const start = currentRef.current;
+    if (Math.abs(start - target) < 0.0001) {
+      currentRef.current = target;
+      setValue(target);
+      return;
+    }
+    const t0 = performance.now();
+    const DURATION = 900;
+    let id = requestAnimationFrame(function step(now) {
+      const p = Math.min(1, (now - t0) / DURATION);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const v = start + (target - start) * eased;
+      currentRef.current = v;
+      setValue(v);
+      if (p < 1) id = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [target]);
+
+  return value;
+}
+
+// 直近50ゲームの平均PPR
+function avgPpr(games: Game[]): number {
+  const last50 = games.slice(-50);
+  if (last50.length === 0) return 0;
+  return last50.reduce((s, g) => s + g.ppr, 0) / last50.length;
+}
+
 export default function Dashboard({ games }: Props) {
   const [tab, setTab] = useState<'league' | 'all'>('league');
   const stats = calcDashboardStats(games, tab === 'all');
+
+  const rtDecimal = getRatingDecimal(stats.ppr);
+
+  // 今日開始時点（= 今日より前のゲームまで）のレーティング
+  const shownGames = tab === 'all' ? games : games.filter((g) => g.type !== 'practice');
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const beforeToday = shownGames.filter((g) => new Date(g.date) < startOfToday);
+  const playedToday = shownGames.length > beforeToday.length;
+  const baseRt = beforeToday.length > 0 ? getRatingDecimal(avgPpr(beforeToday)) : null;
+  const delta = playedToday && baseRt != null ? rtDecimal - baseRt : null;
+
+  // 今日開始時のRTからスタートして、現在のRTまでゲージを動かす
+  const animRt = useAnimatedNumber(rtDecimal, baseRt ?? rtDecimal);
+  const animInt = Math.min(25, Math.max(1, Math.floor(animRt)));
+  const fillPct = Math.max(0, Math.min(100, (animRt - animInt) * 100));
 
   if (games.length === 0) {
     return (
@@ -19,9 +70,6 @@ export default function Dashboard({ games }: Props) {
       </div>
     );
   }
-
-  const rtDecimal = getRatingDecimal(stats.ppr);
-  const fillPct = (rtDecimal - stats.rt) * 100; // 0〜100: 現RTから次RTへの進捗
 
   // フライト別カラー（現在 / 次RT）
   const currentRgb = FLIGHT_RGB[stats.flight] ?? '59,130,246';
@@ -53,13 +101,12 @@ export default function Dashboard({ games }: Props) {
         <div
           className="absolute bottom-0 left-0 right-0 pointer-events-none"
           style={{
-            height: `${stats.rt < 25 ? fillPct : 100}%`,
+            height: `${animInt < 25 ? fillPct : 100}%`,
             background: `linear-gradient(to top, rgba(${currentRgb},0.22) 0%, rgba(${nextRgb},0.10) 100%)`,
-            transition: 'height 0.9s cubic-bezier(0.4,0,0.2,1)',
           }}
         />
         {/* 水面グロウライン（次フライト色） */}
-        {fillPct > 1 && stats.rt < 25 && (
+        {fillPct > 1 && animInt < 25 && (
           <div
             className="absolute left-0 right-0 pointer-events-none"
             style={{
@@ -67,7 +114,6 @@ export default function Dashboard({ games }: Props) {
               height: '1px',
               background: `rgba(${nextRgb},0.7)`,
               boxShadow: `0 0 10px 2px rgba(${nextRgb},0.4)`,
-              transition: 'bottom 0.9s cubic-bezier(0.4,0,0.2,1)',
             }}
           />
         )}
@@ -76,8 +122,19 @@ export default function Dashboard({ games }: Props) {
         <div className="relative z-10 p-6">
           <p className="text-xs text-zinc-600 uppercase tracking-widest mb-1">Rating</p>
           <p className="font-display text-7xl tabular-nums text-zinc-200 leading-none">
-            {rtDecimal.toFixed(2)}
+            {animRt.toFixed(2)}
           </p>
+          {delta != null && (
+            <p
+              className={`text-sm font-bold tabular-nums mt-1 ${
+                delta > 0.004 ? 'text-emerald-400' : delta < -0.004 ? 'text-red-400' : 'text-zinc-500'
+              }`}
+            >
+              {delta > 0.004 ? '▲' : delta < -0.004 ? '▼' : ''}
+              {delta >= 0 ? '+' : '−'}{Math.abs(delta).toFixed(2)}
+              <span className="text-zinc-600 font-normal ml-1">today</span>
+            </p>
+          )}
           <p className="font-display text-3xl mt-2" style={{ color: flightTextColor }}>
             {stats.flight}
           </p>
