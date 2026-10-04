@@ -1120,9 +1120,9 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
         <div className="flex-shrink-0 px-4 pt-2">
           <button
             onClick={handlePreview}
-            className="w-full py-3 rounded-xl bg-zinc-800 active:bg-zinc-700 border border-amber-800 text-amber-300 font-semibold text-sm"
+            className="w-full py-3 rounded-xl bg-zinc-800 active:bg-zinc-600 font-semibold text-sm text-zinc-300"
           >
-            残り計算（ラウンドには入れない）
+            残り計算
           </button>
         </div>
       )}
