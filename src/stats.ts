@@ -123,8 +123,9 @@ export interface DashboardStats {
 export function calcDashboardStats(allGames: Game[], includePractice = false): DashboardStats {
   const leagueGames = includePractice ? allGames : allGames.filter((g) => g.type !== 'practice');
   const last50 = leagueGames.slice(-50);
-  const wins = leagueGames.filter((g) => g.result === 'win').length;
-  const losses = leagueGames.filter((g) => g.result === 'loss').length;
+  // Practice の Single モード（noResult）は勝敗に数えない
+  const wins = leagueGames.filter((g) => g.result === 'win' && !g.noResult).length;
+  const losses = leagueGames.filter((g) => g.result === 'loss' && !g.noResult).length;
 
   // PPR and rating: average PPR of last 50 league games
   const ppr =

@@ -390,7 +390,7 @@ function GameRow({
           <div className="flex items-center gap-2 min-w-0">
             <span
               className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                game.result === 'win' ? 'bg-emerald-400' : 'bg-red-500'
+                game.noResult ? 'bg-zinc-600' : game.result === 'win' ? 'bg-emerald-400' : 'bg-red-500'
               }`}
             />
             <span className={`px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 ${typeBg}`}>
@@ -413,9 +413,13 @@ function GameRow({
               <span className="text-zinc-500 text-xs">PPR </span>
               <span className="text-cyan-400">{game.ppr.toFixed(1)}</span>
             </span>
-            <span className={`text-xs font-bold ${game.result === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
-              {game.result === 'win' ? 'WIN' : 'LOSE'}
-            </span>
+            {game.noResult ? (
+              <span className="text-xs font-bold text-zinc-500">SINGLE</span>
+            ) : (
+              <span className={`text-xs font-bold ${game.result === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
+                {game.result === 'win' ? 'WIN' : 'LOSE'}
+              </span>
+            )}
             <span className="text-zinc-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
           </div>
         </button>

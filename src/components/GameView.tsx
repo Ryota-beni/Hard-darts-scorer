@@ -66,7 +66,9 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   // 先攻・後攻決めのコーク結果（null = No Throw）
   const [openingCork, setOpeningCork] = useState<'win' | 'loss' | null>(null);
   // セットアップ画面での選択（未選択 = null）
-  const [corkChoice, setCorkChoice] = useState<'win' | 'loss' | 'none' | null>(null);
+  const [corkChoice, setCorkChoice] = useState<'win' | 'loss' | 'none' | 'solo' | null>(null);
+  // Practice の Single モード（一人で投げる・勝敗に数えない）
+  const [soloPractice, setSoloPractice] = useState(false);
   const [orderChoice, setOrderChoice] = useState<number | null>(null);
   // 決着コークを自分が投げなかった（勝率に入れない）
   const [corkNoThrow, setCorkNoThrow] = useState(false);
@@ -101,6 +103,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   const [playerLegs, setPlayerLegs] = useState(0);
   const [oppLegs, setOppLegs] = useState(0);
   const [lastLegResult, setLastLegResult] = useState<'win' | 'loss'>('win');
+  const [lastLegPpr, setLastLegPpr] = useState<number | null>(null);
 
   const resetLegState = () => {
     setRounds([]);
@@ -120,6 +123,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setResiting(false);
     setOpeningCork(null);
     setCorkChoice(null);
+    setSoloPractice(false);
     setOrderChoice(null);
   };
 
@@ -170,7 +174,10 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
   const handleGameOn = () => {
     if (!setupReady) return;
-    setOpeningCork(askCork && corkChoice !== 'none' ? corkChoice : null);
+    setOpeningCork(
+      askCork && (corkChoice === 'win' || corkChoice === 'loss') ? corkChoice : null
+    );
+    setSoloPractice(gameType === 'practice' && corkChoice === 'solo');
     if (orderChoice != null) setThrowOrder(orderChoice);
     changePhase('playing');
   };
@@ -360,6 +367,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       ...(openingCork ? { openingCork } : {}),
       ...(cork ? { decidedByCork: true } : {}),
       ...(cork === 'self' ? { limitCork: result } : {}),
+      ...(soloPractice ? { noResult: true } : {}),
       awards: { hundredPlus, hundredFortyPlus, oneEighty, shortDarts, highOut, highStart },
     };
 
@@ -380,6 +388,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setPlayerLegs(newPlayer);
     setOppLegs(newOpp);
     setLastLegResult(result);
+    setLastLegPpr(ppr);
     setLegNumber((n) => n + 1);
 
     if (gameType === 'practice') {
@@ -693,6 +702,19 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
                 No Throw
               </button>
             )}
+            {gameType === 'practice' && (
+              <>
+                <button
+                  onClick={() => setCorkChoice('solo')}
+                  className={`w-full mt-3 py-5 font-display text-3xl leading-none ${choiceBtn(corkChoice === 'solo', 'border-green-400 bg-green-700 text-white')}`}
+                >
+                  Single
+                </button>
+                <p className="text-xs text-zinc-600 mt-2 text-center">
+                  一人で投げる。勝敗には数えず、All のスタッツにだけ反映されます
+                </p>
+              </>
+            )}
           </section>
           )}
         </div>
@@ -728,19 +750,32 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
         <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6">
           <div className="text-center">
             <p className="text-xs text-zinc-600 uppercase tracking-widest mb-1">Leg {legNumber - 1}</p>
-            <p className={`text-3xl font-black ${lastLegResult === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
-              {lastLegResult === 'win' ? 'WIN' : 'LOSE'}
-            </p>
+            {soloPractice ? (
+              <p className="font-display text-4xl text-zinc-200 tabular-nums leading-none">
+                {lastLegPpr != null ? lastLegPpr.toFixed(2) : '—'}
+                <span className="text-xs text-zinc-500 ml-2 font-sans">PPR</span>
+              </p>
+            ) : (
+              <p className={`text-3xl font-black ${lastLegResult === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
+                {lastLegResult === 'win' ? 'WIN' : 'LOSE'}
+              </p>
+            )}
           </div>
 
           {isPractice ? (
             <div className="text-center">
               <p className="text-xs text-zinc-500 mb-1">Session</p>
-              <p className="text-2xl font-bold text-zinc-300 tabular-nums">
-                <span className="text-emerald-400">{playerLegs}W</span>
-                <span className="text-zinc-600 mx-2">·</span>
-                <span className="text-red-400">{oppLegs}L</span>
-              </p>
+              {soloPractice ? (
+                <p className="text-2xl font-bold text-zinc-300 tabular-nums">
+                  {legNumber - 1} Legs
+                </p>
+              ) : (
+                <p className="text-2xl font-bold text-zinc-300 tabular-nums">
+                  <span className="text-emerald-400">{playerLegs}W</span>
+                  <span className="text-zinc-600 mx-2">·</span>
+                  <span className="text-red-400">{oppLegs}L</span>
+                </p>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-10">
@@ -1064,7 +1099,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
           Check Out
         </button>
 
-        {isPractice && (
+        {isPractice && !soloPractice && (
           <button
             onClick={() => setCorkPopup(true)}
             className="py-2.5 rounded-xl bg-zinc-800 active:bg-zinc-700 border border-zinc-600 font-semibold text-sm text-zinc-200"
@@ -1084,9 +1119,13 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
         <button
           onClick={handleLose}
-          className="py-2.5 rounded-xl bg-red-950 active:bg-red-900 border border-red-800 text-red-400 font-semibold text-sm"
+          className={`py-2.5 rounded-xl font-semibold text-sm border ${
+            soloPractice
+              ? 'bg-zinc-800 active:bg-zinc-700 border-zinc-600 text-zinc-300'
+              : 'bg-red-950 active:bg-red-900 border-red-800 text-red-400'
+          }`}
         >
-          Lose
+          {soloPractice ? 'このレグを終了' : 'Lose'}
         </button>
       </div>
     </div>

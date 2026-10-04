@@ -34,5 +34,6 @@ export interface Game {
   openingCork?: 'win' | 'loss'; // 先攻・後攻決めのコーク（自分が投げた時のみ）
   limitCork?: 'win' | 'loss';   // 規定ラウンド投げ切り後のコーク（自分が投げた時のみ）
   decidedByCork?: boolean;      // 規定ラウンド投げ切り → コークで決着（投げた人は問わない）
+  noResult?: boolean;           // Practice の Single モード：勝敗カウントに入れない
   awards: GameAwards;
 }
