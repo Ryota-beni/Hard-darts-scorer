@@ -123,7 +123,6 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setResiting(false);
     setOpeningCork(null);
     setCorkChoice(null);
-    setSoloPractice(false);
     setOrderChoice(null);
   };
 
@@ -139,6 +138,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setThrowOrder(1);
     setMatchPoints(0);
     setMatchDarts(0);
+    setSoloPractice(false);
     changePhase('setup');
   };
 
