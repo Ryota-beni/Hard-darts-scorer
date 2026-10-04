@@ -241,7 +241,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       return;
     }
 
-    if (gameType === 'singles' || gameType === 'practice') {
+    if (gameType === 'practice') {
       const newRemaining = remaining - score;
       if (newRemaining < 0 || newRemaining === 1) {
         // バーストは 0点・3ダーツのラウンドとして記録（残り点数は変わらない）
@@ -327,8 +327,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     const newRounds = rounds.slice(0, -1);
     setRounds(newRounds);
 
-    // Singles/Practice: 残り点数を再計算
-    if (gameType === 'singles' || gameType === 'practice') {
+    // Practice: 残り点数を再計算
+    if (gameType === 'practice') {
       setRemaining(501 - newRounds.reduce((s, r) => s + r.score, 0));
     }
 
