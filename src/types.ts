@@ -6,6 +6,7 @@ export interface Round {
   doubleIn?: boolean;        // doubles: 自分がオープン成功
   doubleInAttempt?: boolean; // doubles: DoubleIn ボタンを押したが 0 点（失敗）
   nco?: boolean;             // チェックアウトをトライしたが失敗
+  bust?: boolean;            // バースト（0点1ラウンドとして記録）
 }
 
 export interface GameAwards {

@@ -510,6 +510,7 @@ function GameRow({
                       {r.doubleIn        && <span className="text-purple-400">●</span>}
                       {r.doubleInAttempt && <span className="text-purple-800">●</span>}
                       {r.nco             && <span className="text-amber-500">●</span>}
+                      {r.bust            && <span className="text-red-500">●</span>}
                     </span>
                   ))}
                 </div>

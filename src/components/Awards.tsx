@@ -26,11 +26,13 @@ export default function Awards({ games }: Props) {
   let totalRounds = 0;
   let totalNco = 0;
   let sixtyPlusCount = 0;
+  let bustCount = 0;
   for (const g of displayGames) {
     if (g.rounds.length > 0) {
       totalRounds += g.rounds.length;
       totalNco += g.noCheckouts;
       sixtyPlusCount += g.rounds.filter((r) => r.score >= 60 && r.score < 100).length;
+      bustCount += g.rounds.filter((r) => r.bust).length;
     }
   }
   const effectiveRounds = Math.max(1, totalRounds - totalNco);
@@ -38,6 +40,7 @@ export default function Awards({ games }: Props) {
   const h100Rate = (totals.hundredPlus / effectiveRounds) * 100;
   const h140Rate = (totals.hundredFortyPlus / effectiveRounds) * 100;
   const h180Rate = (totals.oneEighty / effectiveRounds) * 100;
+  const bustRate = (bustCount / effectiveRounds) * 100;
 
   return (
     <div className="p-4 pb-6 space-y-3">
@@ -90,6 +93,7 @@ export default function Awards({ games }: Props) {
         <RateRow label="100+" rate={h100Rate} color="bg-blue-500" />
         <RateRow label="140+" rate={h140Rate} color="bg-orange-500" />
         <RateRow label="180"  rate={h180Rate} color="bg-yellow-400" />
+        <RateRow label="Bust" rate={bustRate} color="bg-red-500" />
       </div>
     </div>
   );

@@ -244,9 +244,13 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     if (gameType === 'singles' || gameType === 'practice') {
       const newRemaining = remaining - score;
       if (newRemaining < 0 || newRemaining === 1) {
+        // バーストは 0点・3ダーツのラウンドとして記録（残り点数は変わらない）
         setBust(true);
         setTimeout(() => setBust(false), 1500);
+        pushRound({ score: 0, darts: 3, bust: true, ...(ncoActive ? { nco: true } : {}) });
+        if (ncoActive) setNcoCount((p) => p + 1);
         setInput('');
+        setPreviewSub(null);
         return;
       }
       if (newRemaining === 0) {
@@ -338,6 +342,21 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     if (lastRound.nco) setNcoCount((p) => Math.max(0, p - 1));
     setPreviewSub(null);
 
+    setInputError('');
+  };
+
+  // バースト申告（Doubles/Gallon など残り点数を持たないゲーム用）
+  const handleBust = () => {
+    if (reachedLimit) {
+      setCorkPopup(true);
+      return;
+    }
+    setBust(true);
+    setTimeout(() => setBust(false), 1500);
+    pushRound({ score: 0, darts: 3, bust: true, ...(ncoActive ? { nco: true } : {}) });
+    if (ncoActive) setNcoCount((p) => p + 1);
+    setInput('');
+    setPreviewSub(null);
     setInputError('');
   };
 
@@ -1026,6 +1045,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
                 {r.doubleIn        && <span className="text-purple-400">●</span>}
                 {r.doubleInAttempt && <span className="text-purple-800">●</span>}
                 {r.nco             && <span className="text-amber-500">●</span>}
+                {r.bust            && <span className="text-red-500">●</span>}
               </span>
             ))
           )}
@@ -1133,16 +1153,24 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
           );
         })()}
 
-        <button
-          onClick={toggleNCO}
-          className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors ${
-            ncoActive
-              ? 'bg-amber-700 border-amber-500 text-white'
-              : 'bg-transparent border-zinc-700 text-zinc-400'
-          }`}
-        >
-          Try
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={toggleNCO}
+            className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors ${
+              ncoActive
+                ? 'bg-amber-700 border-amber-500 text-white'
+                : 'bg-transparent border-zinc-700 text-zinc-400'
+            }`}
+          >
+            Try
+          </button>
+          <button
+            onClick={handleBust}
+            className="py-2.5 rounded-xl text-sm font-semibold border-2 bg-transparent border-red-900 text-red-400 active:bg-red-950"
+          >
+            Bust
+          </button>
+        </div>
 
         <button
           onClick={handleCheckOutPress}
