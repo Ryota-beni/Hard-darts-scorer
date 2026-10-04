@@ -84,6 +84,8 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   const [personalDoubleIn, setPersonalDoubleIn] = useState(false);
   const [doubleInRoundScore, setDoubleInRoundScore] = useState<number | null>(null);
   const [bust, setBust] = useState(false);
+  // Single: 刺さった分を引いた残り点数のプレビュー（ラウンドには反映しない）
+  const [previewSub, setPreviewSub] = useState<number | null>(null);
   const [inputError, setInputError] = useState('');
 
   // チェックアウトポップアップ
@@ -115,6 +117,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
     setPersonalDoubleIn(false);
     setDoubleInRoundScore(null);
     setBust(false);
+    setPreviewSub(null);
     setInputError('');
     setCheckoutPopup(false);
     setCheckoutScore(0);
@@ -200,7 +203,28 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
   };
 
   const handleDelete = () => {
+    if (!input && previewSub != null) {
+      setPreviewSub(null);
+      return;
+    }
     setInput((p) => p.slice(0, -1));
+    setInputError('');
+  };
+
+  // 刺さった分だけを引いて残りを見る（ラウンドの点数には入れない）
+  const handlePreview = () => {
+    if (!input) {
+      setInputError('刺さった点数を入力');
+      return;
+    }
+    const score = parseInt(input, 10);
+    if (isNaN(score) || score < 0 || score > 180) {
+      setInputError('0〜180の範囲で入力');
+      setInput('');
+      return;
+    }
+    setPreviewSub((p) => (p ?? 0) + score);
+    setInput('');
     setInputError('');
   };
 
@@ -235,6 +259,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
       if (ncoActive) setNcoCount((p) => p + 1);
       setRemaining(newRemaining);
       setInput('');
+      setPreviewSub(null);
     } else {
       // score > 0 かつ Double In 選択中 → 自分がオープン成功
       const isDoubleIn = gameType === 'doubles' && doubleInPending && !personalDoubleIn && score > 0;
@@ -311,6 +336,7 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
 
     // NCO カウントを戻す
     if (lastRound.nco) setNcoCount((p) => Math.max(0, p - 1));
+    setPreviewSub(null);
 
     setInputError('');
   };
@@ -1021,7 +1047,22 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
           <>
             <div>
               <p className="text-xs text-zinc-500 leading-none mb-0.5">残り</p>
-              <p className="text-3xl font-black tabular-nums text-zinc-100 leading-none">{remaining}</p>
+              <p
+                className={`text-3xl font-black tabular-nums leading-none ${
+                  previewSub != null
+                    ? remaining - previewSub < 0
+                      ? 'text-red-400'
+                      : 'text-amber-400'
+                    : 'text-zinc-100'
+                }`}
+              >
+                {previewSub != null ? remaining - previewSub : remaining}
+              </p>
+              {previewSub != null && (
+                <p className="text-[10px] text-zinc-600 leading-none mt-1 tabular-nums">
+                  {remaining} − {previewSub}
+                </p>
+              )}
             </div>
             <span className={`text-4xl font-bold tabular-nums ${bust ? 'text-red-400' : 'text-zinc-400'}`}>
               {bust ? 'BUST!' : (input || '—')}
@@ -1054,6 +1095,17 @@ export default function GameView({ onLegSave, onMatchComplete, onPhaseChange }: 
         <button onClick={handleDelete} className="py-4 rounded-xl bg-zinc-800 active:bg-zinc-600 text-2xl">←</button>
         <button onClick={handleSubmit} className="py-4 rounded-xl bg-zinc-700 active:bg-zinc-500 text-lg font-bold text-cyan-300">入力</button>
       </div>
+
+      {isPractice && soloPractice && (
+        <div className="flex-shrink-0 px-4 pt-2">
+          <button
+            onClick={handlePreview}
+            className="w-full py-3 rounded-xl bg-zinc-800 active:bg-zinc-700 border border-amber-800 text-amber-300 font-semibold text-sm"
+          >
+            残り計算（ラウンドには入れない）
+          </button>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex-1 flex flex-col gap-2 px-4 pt-2 pb-3 justify-end">
